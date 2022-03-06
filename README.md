@@ -1,5 +1,5 @@
 # wumpus-world
------------------------
+
 Todos:
 - [ ] finish rules in main.pl
 - [ ] hard part: design heuristics (where to move next based on current KB?)
