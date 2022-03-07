@@ -22,9 +22,11 @@ world_A(4, 4).
 % can we pass filename for world as argument?
 %world_B(4,4).
 
+% rooms are 1-indexed
+in_bounds(X, Y) :- X >= 1, X <= 4, Y >= 1, Y <= 4.
+room(X, Y) :- in_bounds(X, Y).
 adjacent(room(X, Y), room(A, B)) :- A is X-1, B is Y ; A is X+1, B is Y ; A is X, B is Y-1 ; A is X, B is Y+1.
 safe(room(X, Y)) :- not(pit(room(X, Y)); wumpus(room(X, Y))).
-in_bounds(room(X, Y)) :- X >= 0, X <= 4, Y >= 0, Y <= 4.
 % should the initial score be defined in world builder? there are a lot of initial facts. maybe it is better to put them here because they are shared among worlds. or maybe we can put them in a file of their own.
 score(0, 0). % score is 0 at t=0
 % disregard the following line right now
@@ -42,7 +44,7 @@ stench(room(X, Y)) :- adjacent(room(X, Y), room(A, B)), wumpus(room(A, B)).
 scream(T) :- kill(T), asserta(not(wumpus_alive())),.
 
 % ACTIONS
-move(room(X, Y), room(A, B), T) :- in_bounds(room(X, Y)), adjacent(room(X, Y), room(A, B)),
+move(room(X, Y), room(A, B), T) :- adjacent(room(X, Y), room(A, B)),
 								retractall(position(_, _)),
 								asserta(position(room(X, Y), T+1)),
 								assertz(visited(room(X, Y), T+1)).
