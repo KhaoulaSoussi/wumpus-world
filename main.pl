@@ -17,8 +17,8 @@
   did_shoot/0
 ]).
 
-did_grab() :- false.
-used_gold() :- false.
+did_grab(_) :- false.
+used_gold(_) :- false.
 
 % we have to define different worlds in other pl files.
 world_A(4, 4).
@@ -28,7 +28,10 @@ world_A(4, 4).
 % rooms are 1-indexed
 in_bounds(X, Y) :- X >= 1, X <= 4, Y >= 1, Y <= 4.
 room(X, Y) :- in_bounds(X, Y).
-adjacent(room(X, Y), room(A, B)) :- A is X-1, B is Y ; A is X+1, B is Y ; A is X, B is Y-1 ; A is X, B is Y+1.
+adjacent(room(X, Y), room(A, B)) :- A is X-1, B is Y ;
+									A is X+1, B is Y ; 
+									A is X, B is Y-1 ; 
+									A is X, B is Y+1.
 safe(room(X, Y)) :- not(pit(room(X, Y)); wumpus(room(X, Y))).
 
 % should the initial score be defined in world builder? there are a lot of initial facts. maybe it is better to put them here because they are shared among worlds. or maybe we can put them in a file of their own.
@@ -68,10 +71,11 @@ kill(T) :- shoot(room(X, Y), T), wumpus(room(X, Y)),
 		retractall(wumpus(room(X, Y))),
 		asserta(not(wumpus(room(X, Y)))). % to make the room safe
 
-has_arrows() :- not(did_shoot()).
+has_arrows(_) :- not(did_shoot()).
 % player has gold (and can use it to get out of pits) if they grabbed some gold before and did not use it yet
 
-has_gold() :- did_grab(), not(used_gold()).
-climb_pit() :- did_grab(), has_gold(), 
+has_gold(_) :- did_grab(_), not(used_gold(_)).
+climb_pit(room(X, Y)) :- position(room(X, Y), T), pit(room(X, Y)),
+				did_grab(_), has_gold(_), 
 				retractall(used_gold()),
 				asserta(used_gold()).
