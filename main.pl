@@ -28,10 +28,7 @@ world_A(4, 4).
 % rooms are 1-indexed
 in_bounds(X, Y) :- X >= 1, X <= 4, Y >= 1, Y <= 4.
 room(X, Y) :- in_bounds(X, Y).
-adjacent(room(X, Y), room(A, B)) :- A is X-1, B is Y ;
-									A is X+1, B is Y ; 
-									A is X, B is Y-1 ; 
-									A is X, B is Y+1.
+adjacent(room(X, Y), room(A, B)) :- A is X-1, B is Y ; A is X+1, B is Y ; A is X, B is Y-1 ; A is X, B is Y+1.
 safe(room(X, Y)) :- not(pit(room(X, Y)); wumpus(room(X, Y))).
 
 % should the initial score be defined in world builder? there are a lot of initial facts. maybe it is better to put them here because they are shared among worlds. or maybe we can put them in a file of their own.
