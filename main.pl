@@ -1,20 +1,20 @@
 % order of the rules needs to be verified
 
 % i need to take a better look at these
-:- abolish(position/2).
-:- abolish(wumpus_alive/2). % initially true
-:- abolish(gold/2).
-:- abolish(visited/2).
-:- abolish(did_shoot/2). % shoot is the action. did_shoot keeps track of how many arrows are left -- initially false
-% player life too?
+:- abolish(position/2). % room, time
+:- abolish(wumpus_alive/0). % no argument
+:- abolish(gold/1). % room
+:- abolish(visited/2). % room, time
+:- abolish(did_shoot/0).
+% player life too? score?
 
 % http://www.cse.unsw.edu.au/~billw/dictionaries/prolog/dynamic.html#:~:text=dynamic&text=In%20Prolog%2C%20a%20procedure%20is,loaded%20during%20the%20Prolog%20session.
 :- dynamic([
   position/2,
-  wumpus_alive/2,
-  gold/2,
+  wumpus_alive/0,
+  gold/1,
   visited/2,
-  did_shoot/2,
+  did_shoot/0
 ]).
 
 % we have to define different worlds in other pl files.
@@ -23,6 +23,8 @@ world_A(4, 4).
 %world_B(4,4).
 
 % rooms are 1-indexed
+% Annoying error I don't know how to fix
+%ERROR: c:/users/mouss/documents/wumpus-world/main.pl:28:29: Syntax error: Operator expected
 in_bounds(X, Y) :- X >= 1, X <= 4, Y >= 1, Y <= 4.
 room(X, Y) :- in_bounds(X, Y).
 adjacent(room(X, Y), room(A, B)) :- A is X-1, B is Y ; A is X+1, B is Y ; A is X, B is Y-1 ; A is X, B is Y+1.
@@ -41,7 +43,7 @@ stench(room(X, Y)) :- adjacent(room(X, Y), room(A, B)), wumpus(room(A, B)).
 % is that useful? maybe if we think of orientation, which we are not right now.
 %Bump(room(X, Y)) :- .
 % There is a scream the moment wumpus is killed
-scream(T) :- kill(T), asserta(not(wumpus_alive())),.
+scream(T) :- kill(T), asserta(not(wumpus_alive())).
 
 % ACTIONS
 move(room(X, Y), room(A, B), T) :- adjacent(room(X, Y), room(A, B)),
