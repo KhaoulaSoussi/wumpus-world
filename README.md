@@ -8,3 +8,4 @@ Todos:
 - [ ] screenshots of queries, code comments
 - [ ] *what else?*
 
+Useful refs: https://www.metalevel.at/wumpusworld/wumpus.pl, https://github.com/hilios/wumpus-prolog.
