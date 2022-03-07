@@ -1,11 +1,11 @@
 % Initial states common to all worlds.
-Position(Room(1, 1), 0).
-Score(0, 0).
-HasArrows().
-WumpusAlive().
+position(room(1, 1), 0).
+score(0, 0).
+has_arrows().
+wumpus_alive().
 PlayerAlive().
-HasGold() :- false.
-Visited(Room(1, 1), 0).
-Pit(Room(1, 1)) :- false.
-Wumpus(Room(1, 1)) :- false.
-DidShoot() :- false.
+has_gold() :- false.
+visited(room(1, 1), 0).
+pit(room(1, 1)) :- false.
+wumpus(room(1, 1)) :- false.
+did_shoot() :- false.
