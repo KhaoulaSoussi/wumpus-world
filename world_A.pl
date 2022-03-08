@@ -1,5 +1,4 @@
-%Here we can define a world in terms of placement of pits, wumpus, and gold.
-% Here, I am defining the world in the screenshot from the project description.
+% Here we can define a world in terms of placement of pits, wumpus, and gold.
 wumpus(room(1, 3)).
 pit(room(3, 1)).
 pit(room(3, 3)).

@@ -21,51 +21,25 @@
   did_shoot/0,
   score/1,
   glitter/1,
-  did_grab/0
+  did_grab/0,
+  pit/1
 ]).
 
-% did_grab() :- false.
-% used_gold() :- false.
-
-% :- ensure_loaded('./initial_states.pl').
-% :- ensure_loaded('./world_a.pl').
-
-% INITIAL STATES
-position(room(1, 1), 0).
-score(0).
-wumpus_alive().
-player_alive().
-visited(room(1, 1), 0).
-pit(room(1, 1)) :- false.
-wumpus(room(1, 1)) :- false.
-gold(room(1, 1)) :- false.
-did_shoot() :- false.
-did_grab() :- false.
-used_gold() :- false.
-
-% WORLD
-wumpus(room(1, 3)).
-pit(room(3, 1)).
-pit(room(3, 3)).
-pit(room(4, 4)).
-gold(room(2, 3)).
-
-% this works so far
 valid(X) :- X is 1; X is 2; X is 3; X is 4.
 in_bounds(X, Y) :- valid(X), valid(Y).
 room(X, Y) :- in_bounds(X, Y).
-adjacent(room(X, Y), room(A, B)) :- room(X, Y), room(A, B), (A is X-1, B is Y ;
+adjacent(room(X, Y), room(A, B)) :- room(X, Y), room(A, B),
+                                    (A is X-1, B is Y ;
 									A is X+1, B is Y ;
 									A is X, B is Y-1 ;
 									A is X, B is Y+1).
-%safe(room(X, Y)) :- not(pit(room(X, Y)); wumpus(room(X, Y))).
 safe(room(X, Y)) :- not(pit(room(X, Y))), not(wumpus(room(X, Y))).
 
 % SENSORS
-% might have to add ! to these for more efficient search
 breeze(room(X, Y)) :- pit(room(A, B)), adjacent(room(X, Y), room(A, B)), !.
 glitter(room(X, Y)) :- gold(room(X, Y)).
 stench(room(X, Y)) :- room(A, B), adjacent(room(X, Y), room(A, B)), wumpus(room(A, B)), !.
+
 % There is a bump if current position is a wall
 % is that useful? maybe it is if we think of orientation, which we are not right now.
 %Bump(room(X, Y)) :- .
