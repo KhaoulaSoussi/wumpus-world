@@ -118,16 +118,21 @@ shoot(room(X, Y), T) :- position(room(A, B), T), adjacent(room(X, Y), room(A, B)
 
 % fall(T) :- position(room(X, Y), T), pit(room(X, Y)),
 % 		score(S),
+%		C is S - 1000,
 % 		retractall(score(_)),
-% 		asserta(score(S - 1000)).
-% climb(T) :- fall(T-1), has_gold(T-1),
-% 			retractall(has_gold(_)),
-% 			asserta(not(has_gold(_))),
-% 			score(S),
-% 			retractall(score(_)),
-% 			asserta(score(S - 1)).
+% 		asserta(score(C)).
 
-% eaten(T) :- position(room(X, Y), T), wumpus(room(X, Y)),
-% 		score(S),
-% 		retractall(score(_)),
-% 		asserta(score(S - 1000)).
+climb(T) :- P is T-1, fall(P), has_gold(P),
+			retractall(has_gold(_)),
+			asserta(not(has_gold(_))),
+			score(S),
+			C is S - 1,
+			retractall(score(_)),
+			asserta(score(C)).
+
+eaten(T) :- position(room(X, Y), T), wumpus(room(X, Y)),
+		score(S),
+		C is S - 1000,
+		retractall(score(_)),
+		asserta(score(C)),
+		retractall(player_alive()).
