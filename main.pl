@@ -83,9 +83,11 @@ move(room(X, Y), room(A, B), T) :- position(room(X, Y), T), adjacent(room(X, Y),
 								score(S),
 								C is S - 1,
 								retractall(score(_)),
-								asserta(score(C)), !.
-% We need a better understanding of when to use timestamps.
-grab_gold(room(X, Y)) :- position(room(X, Y), _), gold(room(X, Y)),
+								asserta(score(C)),
+								!.
+								% TODO: printing.
+
+grab_gold(room(X, Y), T) :- position(room(X, Y), T), gold(room(X, Y)),
 						retractall(gold(_)),
 						retractall(glitter(_)),
 						score(S),
@@ -94,12 +96,12 @@ grab_gold(room(X, Y)) :- position(room(X, Y), _), gold(room(X, Y)),
 						asserta(score(C)),
 						retractall(did_grab()),
 						asserta(did_grab()).
-% shoot(room(X, Y), T) :- position(room(A, B), T), adjacent(room(X, Y), room(A, B)), has_arrows(),
-% 					retractall(did_shoot()),
-% 					asserta(did_shoot()),
-% 					score(S),
-% 					retractall(score(_)),
-% 					asserta(score(S - 10)).
+shoot(room(X, Y), T) :- position(room(A, B), T), adjacent(room(X, Y), room(A, B)), has_arrows(),
+					retractall(did_shoot()),
+					asserta(did_shoot()),
+					score(S),
+					retractall(score(_)),
+					asserta(score(S - 10)).
 % kill(T) :- shoot(room(X, Y), T), wumpus(room(X, Y)),
 % 		retractall(wumpus_alive()),
 % 		retractall(wumpus(room(X, Y))),
