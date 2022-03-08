@@ -33,7 +33,6 @@
 % INITIAL STATES
 position(room(1, 1), 0).
 score(0).
-has_arrows().
 wumpus_alive().
 player_alive().
 visited(room(1, 1), 0).
@@ -56,17 +55,17 @@ valid(X) :- X is 1; X is 2; X is 3; X is 4.
 in_bounds(X, Y) :- valid(X), valid(Y).
 room(X, Y) :- in_bounds(X, Y).
 adjacent(room(X, Y), room(A, B)) :- room(X, Y), room(A, B), (A is X-1, B is Y ;
-									A is X+1, B is Y ; 
-									A is X, B is Y-1 ; 
+									A is X+1, B is Y ;
+									A is X, B is Y-1 ;
 									A is X, B is Y+1).
 %safe(room(X, Y)) :- not(pit(room(X, Y)); wumpus(room(X, Y))).
 safe(room(X, Y)) :- not(pit(room(X, Y))), not(wumpus(room(X, Y))).
 
 % SENSORS
 % might have to add ! to these for more efficient search
-breeze(room(X, Y)) :- pit(room(A, B)), adjacent(room(X, Y), room(A, B)).
+breeze(room(X, Y)) :- pit(room(A, B)), adjacent(room(X, Y), room(A, B)), !.
 glitter(room(X, Y)) :- gold(room(X, Y)).
-stench(room(X, Y)) :- room(A, B), adjacent(room(X, Y), room(A, B)), wumpus(room(A, B)).
+stench(room(X, Y)) :- room(A, B), adjacent(room(X, Y), room(A, B)), wumpus(room(A, B)), !.
 % There is a bump if current position is a wall
 % is that useful? maybe it is if we think of orientation, which we are not right now.
 %Bump(room(X, Y)) :- .
@@ -83,10 +82,8 @@ move(room(X, Y), room(A, B), T) :- position(room(X, Y), T), adjacent(room(X, Y),
 								score(S),
 								C is S - 1,
 								retractall(score(_)),
-								asserta(score(C)),
-								!.
-								% TODO: printing.
-
+								asserta(score(C)), !.
+% We need a better understanding of when to use timestamps.
 grab_gold(room(X, Y), T) :- position(room(X, Y), T), gold(room(X, Y)),
 						retractall(gold(_)),
 						retractall(glitter(_)),
@@ -95,13 +92,14 @@ grab_gold(room(X, Y), T) :- position(room(X, Y), T), gold(room(X, Y)),
 						retractall(score(_)),
 						asserta(score(C)),
 						retractall(did_grab()),
-						asserta(did_grab()).
-shoot(room(X, Y), T) :- position(room(A, B), T), adjacent(room(X, Y), room(A, B)), has_arrows(),
-					retractall(did_shoot()),
-					asserta(did_shoot()),
-					score(S),
-					retractall(score(_)),
-					asserta(score(S - 10)).
+						asserta(did_grab()), print('You grabbed the gold at time T = ').
+shoot(room(X, Y), T) :- position(room(A, B), T), adjacent(room(X, Y), room(A, B)), not(did_shoot()),
+ 					retractall(did_shoot()),
+ 					asserta(did_shoot()),
+ 					score(S),
+ 					C is S - 10,
+ 					retractall(score(_)),
+ 					asserta(score(C)), !.
 % kill(T) :- shoot(room(X, Y), T), wumpus(room(X, Y)),
 % 		retractall(wumpus_alive()),
 % 		retractall(wumpus(room(X, Y))),
