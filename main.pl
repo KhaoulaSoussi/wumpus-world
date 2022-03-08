@@ -8,6 +8,8 @@
 :- abolish(visited/2). % room, time
 :- abolish(did_shoot/0).
 :- abolish(score/1).
+:- abolish(glitter/1).
+:- abolish(did_grab/0).
 % player life too?
 
 % See: http://www.cse.unsw.edu.au/~billw/dictionaries/prolog/dynamic.html#:~:text=dynamic&text=In%20Prolog%2C%20a%20procedure%20is,loaded%20during%20the%20Prolog%20session.
@@ -17,7 +19,9 @@
   gold/1,
   visited/2,
   did_shoot/0,
-  score/1
+  score/1,
+  glitter/1,
+  did_grab/0
 ]).
 
 % did_grab() :- false.
@@ -71,7 +75,6 @@ scream(T) :- kill(T), asserta(not(wumpus_alive())).
 
 % % ACTIONS
 % move from x, y to a, b
-position(room(1, 1), 0).
 move(room(X, Y), room(A, B), T) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
 								retractall(position(_, _)),
 								Z is T+1,
@@ -80,16 +83,17 @@ move(room(X, Y), room(A, B), T) :- position(room(X, Y), T), adjacent(room(X, Y),
 								score(S),
 								C is S - 1,
 								retractall(score(_)),
-								asserta(score(C)).
-% We need a better understand of when to use timestamps.
-% grab_gold(room(X, Y), T) :- position(room(X, Y), T), gold(room(X, Y)),
-% 						retractall(gold(_)),
-% 						retractall(glitter(_)), % become false
-% 						score(S),
-% 						retractall(score(_)),
-% 						asserta(score(S + 1000 - 1)),
-% 						retractall(did_grab(_)),
-% 						asserta(did_grab()).
+								asserta(score(C)), !.
+% We need a better understanding of when to use timestamps.
+grab_gold(room(X, Y)) :- position(room(X, Y), _), gold(room(X, Y)),
+						retractall(gold(_)),
+						retractall(glitter(_)),
+						score(S),
+						C is S + 1000 - 1,
+						retractall(score(_)),
+						asserta(score(C)),
+						retractall(did_grab()),
+						asserta(did_grab()).
 % shoot(room(X, Y), T) :- position(room(A, B), T), adjacent(room(X, Y), room(A, B)), has_arrows(),
 % 					retractall(did_shoot()),
 % 					asserta(did_shoot()),

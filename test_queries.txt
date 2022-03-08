@@ -1,0 +1,11 @@
+[main].
+position(room(X, Y), T).
+visited(room(X, Y), T).
+move(room(1, 1), room(1, 2), 0).
+position(room(X, Y), T).
+move(room(1, 2), room(1, 3), 1).
+move(room(1, 3), room(2, 3), 2).
+grab_gold(room(2, 3)).
+gold(room(2, 3)).
+glitter(room(2, 3)).
+score(X).
