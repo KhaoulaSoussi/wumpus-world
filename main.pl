@@ -36,15 +36,20 @@ adjacent(room(X, Y), room(A, B)) :- room(X, Y), room(A, B),
 safe(room(X, Y)) :- not(pit(room(X, Y))), not(wumpus(room(X, Y))).
 
 % SENSORS
-breeze(room(X, Y)) :- pit(room(A, B)), adjacent(room(X, Y), room(A, B)), !.
-glitter(room(X, Y)) :- gold(room(X, Y)).
-stench(room(X, Y)) :- room(A, B), adjacent(room(X, Y), room(A, B)), wumpus(room(A, B)), !.
+breeze(room(X, Y), yes) :- pit(room(A, B)), adjacent(room(X, Y), room(A, B)), !.
+glitter(room(X, Y), yes) :- gold(room(X, Y)).
+stench(room(X, Y), yes) :- room(A, B), adjacent(room(X, Y), room(A, B)), wumpus(room(A, B)), !.
+scream(yes) :- kill().
+breeze(room(X, Y), no).
+glitter(room(X, Y), no).
+stench(room(X, Y), no).
+scream(no).
 
-% There is a bump if current position is a wall
-% is that useful? maybe it is if we think of orientation, which we are not right now.
-%Bump(room(X, Y)) :- .
-% There is a scream the moment wumpus is killed
-scream(T) :- kill(T), asserta(not(wumpus_alive())).
+perceptions([Stench, Breeze, Glitter, Scream]) :- position(room(X, Y), _),
+                                                  stench(room(X,Y), Stench),
+                                                  breeze(room(X,Y), Breeze),
+                                                  glitter(room(X,Y), Breeze),
+                                                  scream(Scream), !.
 
 % % ACTIONS
 % move from x, y to a, b
@@ -67,19 +72,19 @@ grab_gold(room(X, Y), T) :- position(room(X, Y), T), gold(room(X, Y)),
 						asserta(score(C)),
 						retractall(did_grab()),
 						asserta(did_grab()), print('You grabbed the gold at time T = ').
-shoot(room(X, Y), T) :- position(room(A, B), T), adjacent(room(X, Y), room(A, B)), not(did_shoot()),
+shoot(room(X, Y)) :- position(room(A, B), _), adjacent(room(X, Y), room(A, B)), not(did_shoot()),
  					retractall(did_shoot()),
  					asserta(did_shoot()),
  					score(S),
  					C is S - 10,
  					retractall(score(_)),
  					asserta(score(C)), !.
-% kill(T) :- shoot(room(X, Y), T), wumpus(room(X, Y)),
-% 		retractall(wumpus_alive()),
-% 		retractall(wumpus(room(X, Y))),
-% 		asserta(not(wumpus(room(X, Y)))). % to make the room safe
 
-% has_arrows(_) :- not(did_shoot()).
+kill() :- shoot(room(X, Y)), wumpus(room(X, Y)),
+ 		retractall(wumpus_alive()),
+ 		retractall(wumpus(room(X, Y))),
+ 		asserta(not(wumpus(room(X, Y)))). % to make the room safe
+
 % has_gold() :- did_grab(), not(climb()).
 
 % %has_gold(_) :- did_grab(_), not(used_gold(_)).

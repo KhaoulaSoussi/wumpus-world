@@ -5,8 +5,8 @@ has_arrows().
 wumpus_alive().
 player_alive().
 visited(room(1, 1), 0).
-pit(room(1, 1)) :- false.
-wumpus(room(1, 1)) :- false.
+has_pit(room(1, 1), no).
+has_wumpus(room(1, 1), no).
 gold(room(1, 1)) :- false.
 did_shoot() :- false.
 did_grab() :- false.
