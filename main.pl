@@ -1,18 +1,6 @@
 % order of the rules needs to be verified
 % ideally, we would arrange them in terms of meaning (actions, sensors, score-keeping, etc.) while preserving correctness for search
 
-% i need to take a better look at these
-:- abolish(position/2). % room, time
-:- abolish(wumpus_alive/0). % no argument
-:- abolish(gold/1). % room
-:- abolish(visited/2). % room, time
-:- abolish(did_shoot/0).
-:- abolish(score/1).
-:- abolish(glitter/1).
-:- abolish(did_grab/0).
-% player life too?
-
-% See: http://www.cse.unsw.edu.au/~billw/dictionaries/prolog/dynamic.html#:~:text=dynamic&text=In%20Prolog%2C%20a%20procedure%20is,loaded%20during%20the%20Prolog%20session.
 :- dynamic([
   position/2,
   wumpus_alive/0,
@@ -22,7 +10,8 @@
   score/1,
   glitter/1,
   did_grab/0,
-  pit/1
+  pit/1,
+  player_alive/0
 ]).
 
 valid(X) :- X is 1; X is 2; X is 3; X is 4.
@@ -34,6 +23,11 @@ adjacent(room(X, Y), room(A, B)) :- room(X, Y), room(A, B),
 									A is X, B is Y-1 ;
 									A is X, B is Y+1).
 safe(room(X, Y)) :- not(pit(room(X, Y))), not(wumpus(room(X, Y))).
+
+% STATE
+% has_gold() :- did_grab(), not(climb()).
+
+% %has_gold(_) :- did_grab(_), not(used_gold(_)).
 
 % SENSORS
 breeze(room(X, Y), yes) :- pit(room(A, B)), adjacent(room(X, Y), room(A, B)), !.
@@ -62,7 +56,6 @@ move(room(X, Y), room(A, B), T) :- position(room(X, Y), T), adjacent(room(X, Y),
 								C is S - 1,
 								retractall(score(_)),
 								asserta(score(C)), !.
-% We need a better understanding of when to use timestamps.
 grab_gold(room(X, Y), T) :- position(room(X, Y), T), gold(room(X, Y)),
 						retractall(gold(_)),
 						retractall(glitter(_)),
@@ -79,25 +72,23 @@ shoot(room(X, Y)) :- position(room(A, B), _), adjacent(room(X, Y), room(A, B)), 
  					C is S - 10,
  					retractall(score(_)),
  					asserta(score(C)), !.
-
+% Note: kill isn't an action that is actively performed by the agent.
+% It's just an abstraction to verify the death of the Wumpus.
 kill() :- shoot(room(X, Y)), wumpus(room(X, Y)),
  		retractall(wumpus_alive()),
- 		retractall(wumpus(room(X, Y))),
- 		asserta(not(wumpus(room(X, Y)))). % to make the room safe
+ 		retractall(wumpus(room(X, Y))).
 
-% has_gold() :- did_grab(), not(climb()).
-
-% %has_gold(_) :- did_grab(_), not(used_gold(_)).
 % % climb_pit(room(X, Y)) :- position(room(X, Y), T), pit(room(X, Y)),
 % % 				did_grab(_), has_gold(_), 
 % % 				retractall(used_gold()),
 % % 				asserta(used_gold()).
 
-% fall(T) :- position(room(X, Y), T), pit(room(X, Y)),
-% 		score(S),
-%		C is S - 1000,
-% 		retractall(score(_)),
-% 		asserta(score(C)).
+% to add: if used_gold, player dies
+fall(T) :- position(room(X, Y), T), pit(room(X, Y)),
+		score(S),
+		C is S - 1000,
+		retractall(score(_)),
+		asserta(score(C)).
 
 climb(T) :- P is T-1, fall(P), has_gold(P),
 			retractall(has_gold(_)),
