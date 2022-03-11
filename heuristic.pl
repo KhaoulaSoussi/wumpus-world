@@ -36,20 +36,33 @@ tell_kb(scream) :- assertz(scream()).
 % else, move to the safest adjacent room to gather more info
 % if no such moves exists, shoot randomly at any of the adjacents that have wumpus maybe
 
-% leila
-% Breeze: same
-
-% leila
-% Glitter: grab
+%ignore these for now, I still need to fix many stuff
+heuristic(perceptions([yes, _, _, _])) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
+                                          has_wumpus(room(A,B), yes), shoot(room(A, B), T).
+% only if the above was false, we would move to this one
+heuristic(perceptions([yes, _, _, _])) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
+                                          not(has_wumpus(room(A,B), yes)), not(has_wumpus(room(A,B), maybe)),
+                                          not(has_pit(room(A,B), yes)), not(has_pit(room(A,B), maybe)),
+                                          move(room(X, Y), room(A, B), T).
+% only if the two above heuristics are face, we move to this one
+heuristic(perceptions([yes, _, _, _])) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
+                                          has_wumpus(room(A,B), maybe), shoot(room(A, B), T).
 
 % khaoula
 % Scream: quit
 
+% khaoula
+% define explorable cells (visited + neighbors of visited)
+
+
+% leila
+% Breeze: same as stench
+
+% leila
+% Glitter: grab
+
 % Leila
 % safest move (score)
-
-% khaoula
-% define explorable cells (visited + neighbors of visi)
 
 % leila
 % parent

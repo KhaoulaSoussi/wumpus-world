@@ -22,17 +22,15 @@ adjacent(room(X, Y), room(A, B)) :- room(X, Y), room(A, B),
 									A is X+1, B is Y ;
 									A is X, B is Y-1 ;
 									A is X, B is Y+1).
+
+% the player should not have the right to check if a room is safe... This rule should be used only if we want to check if the current position
+% is safe... BUT, we actually care about what is in the current position (wumpus/pit/none) to act accordingly
 safe(room(X, Y)) :- not(pit(room(X, Y))), not(wumpus(room(X, Y))).
-
-% STATE
-% has_gold() :- did_grab(), not(climb()).
-
-% %has_gold(_) :- did_grab(_), not(used_gold(_)).
 
 % SENSORS
 breeze(room(X, Y), yes) :- pit(room(A, B)), adjacent(room(X, Y), room(A, B)), !.
 glitter(room(X, Y), yes) :- gold(room(X, Y)).
-stench(room(X, Y), yes) :- room(A, B), adjacent(room(X, Y), room(A, B)), wumpus(room(A, B)), !.
+stench(room(X, Y), yes) :- wumpus(room(A, B)), adjacent(room(X, Y), room(A, B)),  !.
 scream(yes) :- kill().
 breeze(room(X, Y), no).
 glitter(room(X, Y), no).
@@ -42,11 +40,16 @@ scream(no).
 perceptions([Stench, Breeze, Glitter, Scream]) :- position(room(X, Y), _),
                                                   stench(room(X,Y), Stench),
                                                   breeze(room(X,Y), Breeze),
-                                                  glitter(room(X,Y), Breeze),
+                                                  glitter(room(X,Y), Glitter),
                                                   scream(Scream), !.
 
-% % ACTIONS
-% move from x, y to a, b
+% GOLD STATE
+has_gold() :- did_grab(), not(climb()).
+
+% ACTIONS
+% move from room(X, Y) to room(A, B)
+
+% no need for the two first rules position(room(X, Y), T), adjacent(room(X, Y), room(A, B)) because we would only call move once we check for these
 move(room(X, Y), room(A, B), T) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
 								retractall(position(_, _)),
 								Z is T+1,
@@ -56,6 +59,7 @@ move(room(X, Y), room(A, B), T) :- position(room(X, Y), T), adjacent(room(X, Y),
 								C is S - 1,
 								retractall(score(_)),
 								asserta(score(C)), !.
+
 grab_gold(room(X, Y), T) :- position(room(X, Y), T), gold(room(X, Y)),
 						retractall(gold(_)),
 						retractall(glitter(_)),
@@ -64,7 +68,10 @@ grab_gold(room(X, Y), T) :- position(room(X, Y), T), gold(room(X, Y)),
 						retractall(score(_)),
 						asserta(score(C)),
 						retractall(did_grab()),
-						asserta(did_grab()), print('You grabbed the gold at time T = ').
+						asserta(did_grab()).
+
+
+% no need for the two first rules position(room(X, Y), T), adjacent(room(X, Y), room(A, B)) because we would only call move once we check for these
 shoot(room(X, Y)) :- position(room(A, B), _), adjacent(room(X, Y), room(A, B)), not(did_shoot()),
  					retractall(did_shoot()),
  					asserta(did_shoot()),
@@ -72,31 +79,28 @@ shoot(room(X, Y)) :- position(room(A, B), _), adjacent(room(X, Y), room(A, B)), 
  					C is S - 10,
  					retractall(score(_)),
  					asserta(score(C)), !.
-% Note: kill isn't an action that is actively performed by the agent.
-% It's just an abstraction to verify the death of the Wumpus.
+
+% Note: kill is not an action that is actively performed by the agent.
+% It is just an abstraction to verify the death of the Wumpus.
 kill() :- shoot(room(X, Y)), wumpus(room(X, Y)),
  		retractall(wumpus_alive()),
  		retractall(wumpus(room(X, Y))).
 
-% % climb_pit(room(X, Y)) :- position(room(X, Y), T), pit(room(X, Y)),
-% % 				did_grab(_), has_gold(_), 
-% % 				retractall(used_gold()),
-% % 				asserta(used_gold()).
+climb(T) :- P is T-1, position(room(X, Y), P), pit(room(X, Y)),
+				did_grab(), has_gold(),
+				retractall(has_gold()),
+				score(S),
+				C is S - 1000 - 1,
+                retractall(score(_)),
+                asserta(score(C)).
 
 % to add: if used_gold, player dies
 fall(T) :- position(room(X, Y), T), pit(room(X, Y)),
 		score(S),
 		C is S - 1000,
 		retractall(score(_)),
-		asserta(score(C)).
-
-climb(T) :- P is T-1, fall(P), has_gold(P),
-			retractall(has_gold(_)),
-			asserta(not(has_gold(_))),
-			score(S),
-			C is S - 1,
-			retractall(score(_)),
-			asserta(score(C)).
+		asserta(score(C)),
+		retractall(player_alive()).
 
 eaten(T) :- position(room(X, Y), T), wumpus(room(X, Y)),
 		score(S),
