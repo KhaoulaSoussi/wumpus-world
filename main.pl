@@ -1,6 +1,12 @@
 % order of the rules needs to be verified
 % ideally, we would arrange them in terms of meaning (actions, sensors, score-keeping, etc.) while preserving correctness for search
 
+:- abolish(position/2). % room, time
+:- abolish(wumpus_alive/0). % no argument
+:- abolish(gold/1). % room
+:- abolish(visited/2). % room, time
+:- abolish(did_shoot/0).
+
 :- dynamic([
   position/2,
   wumpus_alive/0,
@@ -59,7 +65,7 @@ move(room(X, Y), room(A, B), T) :- A \== X, B \== Y, position(room(X, Y), T), ad
 								score(S),
 								C is S - 1,
 								retractall(score(_)),
-								asserta(score(C)), !.
+								asserta(score(C)), format("Moved from room(~w,~w) to room(~w,~w) at time ~w~n", [X,Y,A,B,T]), !.
 
 grab_gold(room(X, Y), T) :- position(room(X, Y), T), gold(room(X, Y)),
 						retractall(gold(_)),
@@ -69,7 +75,8 @@ grab_gold(room(X, Y), T) :- position(room(X, Y), T), gold(room(X, Y)),
 						retractall(score(_)),
 						asserta(score(C)),
 						retractall(did_grab()),
-						asserta(did_grab()).
+						asserta(did_grab()),
+						format("Grabbed gold from room(~w,~w) at time ~w~n", [X,Y,T]).
 
 
 % no need for the two first rules position(room(X, Y), T), adjacent(room(X, Y), room(A, B)) because we would only call move once we check for these
