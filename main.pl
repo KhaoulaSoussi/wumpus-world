@@ -11,7 +11,8 @@
   glitter/1,
   did_grab/0,
   pit/1,
-  player_alive/0
+  player_alive/0,
+  parent/2 % first arg is parent of second arg
 ]).
 
 valid(X) :- X is 1; X is 2; X is 3; X is 4.
@@ -47,14 +48,14 @@ perceptions([Stench, Breeze, Glitter, Scream]) :- position(room(X, Y), _),
 has_gold() :- did_grab(), not(climb()).
 
 % ACTIONS
-% move from room(X, Y) to room(A, B)
-
-% no need for the two first rules position(room(X, Y), T), adjacent(room(X, Y), room(A, B)) because we would only call move once we check for these
-move(room(X, Y), room(A, B), T) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
+% move from room(X, Y) to room(A, B) -- atomic move
+% NOTE: it could be a problem is A, B is the same as X, Y. If it happens repeatedly, the program might not terminate in a reasonable time, or at all.
+move(room(X, Y), room(A, B), T) :- A \== X, B \== Y, position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
 								retractall(position(_, _)),
 								Z is T+1,
 								asserta(position(room(A, B), Z)),
 								assertz(visited(room(A, B), Z)),
+								asserta(parent(room(X, Y), room(A, B))),
 								score(S),
 								C is S - 1,
 								retractall(score(_)),
