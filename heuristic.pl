@@ -35,35 +35,35 @@ tell_kb(glitter) :- assertz(glitter(room(X,Y))).
 tell_kb(scream) :- assertz(scream()).
 
 % HEURISTICS
-% Khaoula
-% Stench: if we have has_wumpus(room(X, Y), yes) for some adjacent room(X, Y), shoot there
-% else, move to the safest adjacent room to gather more info
-% if no such moves exists, shoot randomly at any of the adjacents that have wumpus maybe
+
+% think about the second argument of heuristic and how it is used
+% think about how heuristic itself is used
 
 % Shoot the wumpus when you are sure it is in room(A,B)
 heuristic(perceptions([yes, _, _, _]), shoot) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
                                           has_wumpus(room(A,B), yes), shoot(room(A, B), T), !.
 
 % If not sure where the wumpus is, move to an adjacent room that may be safe
+% Why not move to safest room then, using the score?
 heuristic(perceptions([yes, _, _, _]), move) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
                                           not(has_wumpus(room(A,B), yes)), not(has_wumpus(room(A,B), maybe)),
                                           not(has_pit(room(A,B), yes)), not(has_pit(room(A,B), maybe)),
                                           move(room(X, Y), room(A, B), T).
 
-‰ If not sure where the wumpus is, and no adjacent room is maybe safe, shoot any random adjacent room where there may be the wumpus
+% If not sure where the wumpus is, and no adjacent room is maybe safe, shoot any random adjacent room where there may be the wumpus
 heuristic(perceptions([yes, _, _, _]), shoot) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
                                                  has_wumpus(room(A,B), maybe), shoot(room(A, B), T).
 
 % Question: if we do not know where the wumpus is, but all the neighboring rooms have been visited except one, we can just shoot that one, right?
-% Question: if we do not know where the wumpus is, should we move to a neighboring room that has not been visited yet??
+% Yup. Sounds oddly specific hahah but it might be useful.
+% Question: if we do not know where the wumpus is, should we move to a neighboring room that has not been visited yet?
+% We could. I think we should leave the decision to move to the safety score
 % or maybe to be safer we can visit one that has already been visited and continue from there to other rooms unless we fall in a cycle
+% yeah, we need to make sure we make meaningful moves: don't keep moving to visited places and make sure your destination is different from your start point
 
-% khaoula
-% Scream: quit
 heuristic(perceptions([_, _, _, yes]), quit) :- write('Game over... You won!'), halt().
 
-% khaoula
-% define explorable cells (visited + neighbors of visited)
+% does this handle rooms that are adjacent to visited?
 explorableRooms(L) :- position(room(X,Y), _),
                       findall(room(A,B), adjacent(room(X, Y), room(A, B)), L1),
                       findall(room(C,D), visited(room(C,D),_), L2),
@@ -71,6 +71,7 @@ explorableRooms(L) :- position(room(X,Y), _),
                       remove_duplicates(R, L).
 
 % Tried to append without duplicates but didnt work
+% it's alright
 append_no_dupl(_, [], _).
 append_no_dupl(L, [H|T], R) :- member(H, L), append_no_dupl(L, T, R).
 append_no_dupl(L, [H|T], R) :- not(member(H, L)), append(L, [H], R), append_no_dupl(R, T, X).
@@ -82,19 +83,34 @@ remove_duplicates([Head | Tail], Result) :-
 remove_duplicates([Head | Tail], [Head | Result]) :-
     remove_duplicates(Tail, Result).
 
-% leila
-% Breeze: same as stench
+heuristic([_, yes, _, _], move(room(X, Y), room(A, B), T)) :- tell_kb(breeze), current_safest_cell(room(A, B)).
 
-% leila
-% Glitter: grab
+heuristic([_, _, yes, _], grab_gold) :- tell_kb(glitter), !.
 
-% Leila
-% safest move (score)
+current_safest_cell(room(X, Y)) :- findall(S, total_current_score(room(A, B), S), L), % has to be explorable
+            % will probably have to get explorable list and append it to this L (it's okay if there are duplicates, i think)
+                                  min_list(L, MinScore),
+                                  index_of(MinScore, L, Idx),
+                                  nth0(Idx, L, room(X, Y)).
 
-% leila
-% parent
+% util to get index of element
+% From reference:
+% index_of([H|_], H, 0):- !.
+% index_of([_|T], H, Index):- index_of(T, H, OldIndex), !, Index is OldIndex + 1.
+% I hope the following works:
+index_of(Elt, Lst, Idx) :- nth0(Idx, Lst, Elt).
 
-% leila
-% climb heuristic
+total_current_score(room(X, Y), T) :- findall(P, partial_score(room(X, Y), P), L), sum_list(L, T).
 
+% The lower the score, the safer the room
+partial_score(room(X, Y), S) :- has_pit(room(X, Y), yes), S is 1000.
+partial_score(room(X, Y), S) :- has_wumpus(room(X, Y), yes), S is 2000.
+partial_score(room(X, Y), S) :- has_pit(room(X, Y), maybe), S is 400.
+partial_score(room(X, Y), S) :- has_wumpus(room(X, Y), maybe), S is 800.
 
+% A bunch of atomic moves from X, Y to A, B
+% traveling from xy to ab through zw is equivalent to moving from xy to zw atomically then traveling from zw to ab
+% base case: same room
+% zw is xy's parent
+travel(room(X, Y), room(A, B), T) :- room(Z, W), parent(room(Z, W), room(X, Y)), 
+                    move(room(X, Y), room(Z, W), T), U is T+1, travel(room(Z, W), room(A, B), U), !.
