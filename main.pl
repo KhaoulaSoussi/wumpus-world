@@ -67,7 +67,7 @@ move(room(X, Y), room(A, B), T) :- A \== X, B \== Y, position(room(X, Y), T), ad
 								retractall(score(_)),
 								asserta(score(C)), format("Moved from room(~w,~w) to room(~w,~w) at time ~w~n", [X,Y,A,B,T]), !.
 
-grab_gold(room(X, Y), T) :- position(room(X, Y), T), gold(room(X, Y)),
+grab_gold(T) :- position(room(X, Y), T), gold(room(X, Y)),
 						retractall(gold(_)),
 						retractall(glitter(_)),
 						score(S),

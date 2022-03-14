@@ -29,52 +29,37 @@ has_pit(room(X,Y), maybe) :- not(has_pit(room(X, Y), yes)), not(has_pit(room(X, 
 has_wumpus(room(X,Y), maybe) :- not(has_wumpus(room(X, Y), yes)), not(has_wumpus(room(X, Y), no)), not(has_pit(room(X,Y), yes)),
                                 adjacent(room(X,Y), room(A, B)) , stench(room(A,B)), !.
 
-tell_kb(breeze) :- assertz(breeze(room(X,Y))).
-tell_kb(stench) :- assertz(stench(room(X,Y))).
-tell_kb(glitter) :- assertz(glitter(room(X,Y))).
+tell_kb(breeze, room(X, Y)) :- assertz(breeze(room(X,Y))).
+tell_kb(stench, room(X, Y)) :- assertz(stench(room(X,Y))).
+tell_kb(glitter, room(X, Y)) :- assertz(glitter(room(X,Y))).
 tell_kb(scream) :- assertz(scream()).
 
 % HEURISTICS
 
-% think about the second argument of heuristic and how it is used
-% think about how heuristic itself is used
-
 % Shoot the wumpus when you are sure it is in room(A,B)
-heuristic(perceptions([yes, _, _, _]), shoot) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
+heuristic(perceptions([yes, _, _, _])) :-  position(room(X, Y), T), tell_kb(stench, room(X, Y)),adjacent(room(X, Y), room(A, B)),
                                           has_wumpus(room(A,B), yes), shoot(room(A, B), T), !.
 
 % If not sure where the wumpus is, move to an adjacent room that may be safe
-% Why not move to safest room then, using the score?
-heuristic(perceptions([yes, _, _, _]), move) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
-                                          not(has_wumpus(room(A,B), yes)), not(has_wumpus(room(A,B), maybe)),
-                                          not(has_pit(room(A,B), yes)), not(has_pit(room(A,B), maybe)),
+heuristic(perceptions([yes, _, _, _])) :- position(room(X, Y), T), tell_kb(stench, room(X, Y)), current_safest_cell(room(A, B)),
                                           move(room(X, Y), room(A, B), T).
 
 % If not sure where the wumpus is, and no adjacent room is maybe safe, shoot any random adjacent room where there may be the wumpus
-heuristic(perceptions([yes, _, _, _]), shoot) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
+heuristic(perceptions([yes, _, _, _])) :- position(room(X, Y), T), tell_kb(stench, room(X, Y)),  adjacent(room(X, Y), room(A, B)),
                                                  has_wumpus(room(A,B), maybe), shoot(room(A, B), T).
 
-% Question: if we do not know where the wumpus is, but all the neighboring rooms have been visited except one, we can just shoot that one, right?
-% Yup. Sounds oddly specific hahah but it might be useful.
-% Question: if we do not know where the wumpus is, should we move to a neighboring room that has not been visited yet?
-% We could. I think we should leave the decision to move to the safety score
-% or maybe to be safer we can visit one that has already been visited and continue from there to other rooms unless we fall in a cycle
-% yeah, we need to make sure we make meaningful moves: don't keep moving to visited places and make sure your destination is different from your start point
-
-heuristic(perceptions([_, _, _, yes]), quit) :- write('Game over... You won!'), halt().
+heuristic(perceptions([_, _, _, yes])) :- write('Game over... You won!'), halt().
 
 % does this handle rooms that are adjacent to visited?
 explorableRooms(L) :- position(room(X,Y), _),
                       findall(room(A,B), adjacent(room(X, Y), room(A, B)), L1),
                       findall(room(C,D), visited(room(C,D),_), L2),
-                      append(L1, L2, R),
+                      findall(L3, adjacent_to_visited(L3) ,L4),
+                      flatten(L4, L5),
+                      append([L1, L2, L5], R),
                       remove_duplicates(R, L).
 
-% Tried to append without duplicates but didnt work
-% it's alright
-append_no_dupl(_, [], _).
-append_no_dupl(L, [H|T], R) :- member(H, L), append_no_dupl(L, T, R).
-append_no_dupl(L, [H|T], R) :- not(member(H, L)), append(L, [H], R), append_no_dupl(R, T, X).
+adjacent_to_visited(L) :- visited(room(X,Y), _), findall(room(A,B), adjacent(room(X, Y), room(A, B)), L).
 
 remove_duplicates([], []).
 remove_duplicates([Head | Tail], Result) :-
@@ -83,9 +68,9 @@ remove_duplicates([Head | Tail], Result) :-
 remove_duplicates([Head | Tail], [Head | Result]) :-
     remove_duplicates(Tail, Result).
 
-heuristic([_, yes, _, _], move(room(X, Y), room(A, B), T)) :- tell_kb(breeze), current_safest_cell(room(A, B)).
+heuristic([_, yes, _, _]) :- position(room(X, Y), T), tell_kb(breeze, room(X, Y)), current_safest_cell(room(A, B)), move(room(X, Y), room(A, B), T).
 
-heuristic([_, _, yes, _], grab_gold) :- tell_kb(glitter), !.
+heuristic([_, _, yes, _]) :- position(room(X, Y), T), tell_kb(glitter, room(X, Y)), grab_gold(_)!.
 
 current_safest_cell(room(X, Y)) :- findall(S, total_current_score(room(A, B), S), L), % has to be explorable
             % will probably have to get explorable list and append it to this L (it's okay if there are duplicates, i think)
@@ -112,5 +97,7 @@ partial_score(room(X, Y), S) :- has_wumpus(room(X, Y), maybe), S is 800.
 % traveling from xy to ab through zw is equivalent to moving from xy to zw atomically then traveling from zw to ab
 % base case: same room
 % zw is xy's parent
+
+travel(room(A, B), room(A, B), _).
 travel(room(X, Y), room(A, B), T) :- room(Z, W), parent(room(Z, W), room(X, Y)), 
                     move(room(X, Y), room(Z, W), T), U is T+1, travel(room(Z, W), room(A, B), U), !.
