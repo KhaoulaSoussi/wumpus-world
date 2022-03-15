@@ -1,3 +1,7 @@
+% Do we need to abolish stench, breeze, glitter, and scream?
+% Clean some rules from unnecessary checks (e.g., no_surrounding_pit() checks if there is room(X,Y) which adjacent() also does that)
+% I think we should keep track of all the safe rooms (i.e., all adjacent rooms to a room with no perceptions + visited rooms)
+
 :- dynamic([
   stench/1,
   breeze/1,
@@ -5,20 +9,32 @@
   scream/0
 ]).
 
-% A room X,Y definitely has a pit, if there is a breeze in room A,B adjacent to X,Y, and none of the adjacent rooms to A,B have a pit
+% A room X,Y definitely has a pit if there is a breeze in room A,B adjacent to X,Y, and none of the adjacent rooms to A,B have a pit
 has_pit(room(X,Y), yes) :- room(A,B), breeze(room(A,B)), adjacent(room(X,Y), room(A, B)), no_surrounding_pit(room(A,B)).
 
 no_surrounding_pit(room(A,B)) :- room(X,Y), adjacent(room(X,Y), room(A, B)), not(has_pit(room(X,Y), no)) , !, fail.
+
+% A room X,Y definitely has a pit if there is a breeze in room A,B adjacent to X,Y, and all the adjacent rooms to A,B were visited
+has_pit(room(X,Y), yes) :- room(A,B), breeze(room(A,B)), adjacent(room(X,Y), room(A, B)), all_adjacent_visited(room(A,B)).
+
+all_adjacent_visited(room(A,B)) :- room(X,Y), adjacent(room(X,Y), room(A, B)), not(visited(room(X,Y)),_) , !, fail.
 
 % A room X,Y definitely has a wumpus, if there is a stench in room A,B adjacent to X,Y, and none of the adjacent rooms to A,B have a wumpus
 has_wumpus(room(X,Y), yes) :- room(A,B), stench(room(A,B)), adjacent(room(X,Y), room(A, B)), no_surrounding_wumpus(room(A,B)).
 
 no_surrounding_wumpus(room(A,B)) :- room(X,Y), adjacent(room(X,Y), room(A, B)), not(has_wumpus(room(X,Y), no)) , !, fail.
 
+% A room X,Y definitely has a wumpus if there is a stench in room A,B adjacent to X,Y, and all the adjacent rooms to A,B were visited
+has_wumpus(room(X,Y), yes) :- room(A,B), stench(room(A,B)), adjacent(room(X,Y), room(A, B)), all_adjacent_visited(room(A,B)).
+
+% OOOH We should change this rule to: A room X,Y definitely has no pit, if at least one of its adjacent rooms does not have a breeze, or if it has a wumpus
+% (I encountered this case while manually tracking the heuristics on world_A )
 % A room X,Y definitely has no pit, if none of its adjacent rooms have a breeze, or if it has a wumpus
 has_pit(room(X,Y), no) :- (position(room(A, B), _), adjacent(room(X,Y), room(A, B)), not(breeze(room(A,B))));
                           has_wumpus(room(X,Y), yes).
 
+
+% OOOH We should change this rule to: A room X,Y definitely has no wumpus, if at least one of its adjacent rooms does not have a stench, or if it has a pit
 % A room X,Y definitely has no wumpus, if none of its adjacent rooms have a stench, or if it has a pit
 has_wumpus(room(X,Y), no) :- (position(room(A, B), _), adjacent(room(X,Y), room(A, B)), not(stench(room(A,B)))).
                              has_pit(room(X,Y), yes).
@@ -45,8 +61,11 @@ heuristic(perceptions([yes, _, _, _])) :- position(room(X, Y), T), tell_kb(stenc
                                           move(room(X, Y), room(A, B), T).
 
 % If not sure where the wumpus is, and no adjacent room is maybe safe, shoot any random adjacent room where there may be the wumpus
-heuristic(perceptions([yes, _, _, _])) :- position(room(X, Y), T), tell_kb(stench, room(X, Y)),  adjacent(room(X, Y), room(A, B)),
+heuristic(perceptions([yes, _, _, _])) :- position(room(X, Y), T), tell_kb(stench, room(X, Y)), adjacent(room(X, Y), room(A, B)),
                                                  has_wumpus(room(A,B), maybe), shoot(room(A, B), T).
+
+% if there are no perceptions at the current rooms, all adjacent rooms are safe, move randomly
+heuristic(perceptions([no, no, no, no])) :- position(room(X, Y), T), adjacent(room(X,Y), room(A, B)), move(room(X, Y), room(A, B), T).
 
 heuristic(perceptions([_, _, _, yes])) :- write('Game over... You won!'), halt().
 

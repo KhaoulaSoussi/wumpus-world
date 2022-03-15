@@ -94,15 +94,14 @@ kill() :- shoot(room(X, Y)), wumpus(room(X, Y)),
  		retractall(wumpus_alive()),
  		retractall(wumpus(room(X, Y))).
 
-climb(T) :- P is T-1, position(room(X, Y), P), pit(room(X, Y)),
+/* climb(T) :- P is T-1, position(room(X, Y), P), pit(room(X, Y)),
 				did_grab(), has_gold(),
 				retractall(has_gold()),
 				score(S),
 				C is S - 1000 - 1,
                 retractall(score(_)),
-                asserta(score(C)).
+                asserta(score(C)). */
 
-% to add: if used_gold, player dies
 fall(T) :- position(room(X, Y), T), pit(room(X, Y)),
 		score(S),
 		C is S - 1000,
@@ -116,3 +115,19 @@ eaten(T) :- position(room(X, Y), T), wumpus(room(X, Y)),
 		retractall(score(_)),
 		asserta(score(C)),
 		retractall(player_alive()).
+
+
+start_game :- loop(0).
+
+loop(100) :- write('Game Over... Reached max number of moves!'), nl, halt(), !.
+loop(T) :-
+  heuristic(perceptions(L)),       % Perceive and send perceptions to the heuristic
+  position(room(X, Y), T),
+  fall(T) -> (
+    format("Game Over... You fell in a pit in room(~w,~w) at time ~w!~n", [X,Y,T]).
+  );
+  eaten(T) -> (
+    format("Game Over... You were eaten by the wumpus in room(~w,~w) at time ~w!~n", [X,Y,T]).
+  );
+  Iter is T + 1,
+  loop(Iter).
