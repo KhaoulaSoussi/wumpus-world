@@ -1,10 +1,9 @@
-% order of the rules needs to be verified
-% ideally, we would arrange them in terms of meaning (actions, sensors, score-keeping, etc.) while preserving correctness for search
+% ideally, we would order the rules in terms of meaning (actions, sensors, score-keeping, etc.) while preserving correctness for search
 
-:- abolish(position/2). % room, time
-:- abolish(wumpus_alive/0). % no argument
-:- abolish(gold/1). % room
-:- abolish(visited/2). % room, time
+:- abolish(position/2).
+:- abolish(wumpus_alive/0).
+:- abolish(gold/1).
+:- abolish(visited/2).
 :- abolish(did_shoot/0).
 
 :- dynamic([
@@ -18,7 +17,7 @@
   did_grab/0,
   pit/1,
   player_alive/0,
-  parent/2 % first arg is parent of second arg
+  parent/2
 ]).
 
 valid(X) :- X is 1; X is 2; X is 3; X is 4.
@@ -32,6 +31,7 @@ adjacent(room(X, Y), room(A, B)) :- room(X, Y), room(A, B),
 
 % the player should not have the right to check if a room is safe... This rule should be used only if we want to check if the current position
 % is safe... BUT, we actually care about what is in the current position (wumpus/pit/none) to act accordingly
+safe(room(X, Y)) :- visited(room(X, Y), _), !.
 safe(room(X, Y)) :- not(pit(room(X, Y))), not(wumpus(room(X, Y))).
 
 % SENSORS
@@ -116,13 +116,14 @@ eaten(T) :- position(room(X, Y), T), wumpus(room(X, Y)),
 		asserta(score(C)),
 		retractall(player_alive()).
 
-
 start_game :- loop(0).
 
+% will we consider doing this with score (life/health) instead?
 loop(100) :- write('Game Over... Reached max number of moves!'), nl, halt(), !.
 loop(T) :-
   heuristic(perceptions(L)),       % Perceive and send perceptions to the heuristic
   position(room(X, Y), T),
+  % parentheses? (operator priority)
   fall(T) -> (
     format("Game Over... You fell in a pit in room(~w,~w) at time ~w!~n", [X,Y,T]).
   );
