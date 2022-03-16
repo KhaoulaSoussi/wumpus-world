@@ -19,7 +19,7 @@ has_pit(room(X,Y), yes) :- room(A,B), breeze(room(A,B)), adjacent(room(X,Y), roo
 % A room X,Y definitely has a pit if there is a breeze in room A,B adjacent to X,Y, and all the adjacent rooms to A,B were visited
 has_pit(room(X,Y), yes) :- room(A,B), breeze(room(A,B)), adjacent(room(X,Y), room(A, B)), all_adjacent_visited(room(A,B)).
 
-% A room X,Y definitely has no pit, if at least one of its adjacents doesn't have a breeze, or if it has a wumpus
+% A room X,Y definitely has no pit, if at least one of its adjacent rooms does not have a breeze, or if it has a wumpus
 has_pit(room(X,Y), no) :- position(room(A, B), _), adjacent(room(X,Y), room(A, B)), not(breeze(room(A,B))), !.
 has_pit(room(X,Y), no) :- has_wumpus(room(X,Y), yes).
 
@@ -37,7 +37,7 @@ has_wumpus(room(X,Y), yes) :- room(A,B), stench(room(A,B)), adjacent(room(X,Y), 
 % A room X,Y definitely has a wumpus if there is a stench in room A,B adjacent to X,Y, and all the adjacent rooms to A,B were visited
 has_wumpus(room(X,Y), yes) :- room(A,B), stench(room(A,B)), adjacent(room(X,Y), room(A, B)), all_adjacent_visited(room(A,B)).
 
-% A room X,Y definitely has no wumpus, if at least one of its adjacents doesn't have a stench, or if it has a pit
+% A room X,Y definitely has no wumpus, if at least one of its adjacent rooms does not have a stench, or if it has a pit
 has_wumpus(room(X,Y), no) :- position(room(A, B), _), adjacent(room(X,Y), room(A, B)), not(stench(room(A,B))), !.
 
 has_wumpus(room(X,Y), no) :- has_pit(room(X,Y), yes).
@@ -51,7 +51,7 @@ tell_kb(glitter, room(X, Y)) :- assertz(glitter(room(X,Y))).
 tell_kb(scream) :- assertz(scream()).
 
 % HEURISTICS
-
+%%% Should we add heuristic for perceptions of both stench and breeze
 % Shoot the wumpus when you are sure it is in room(A,B)
 heuristic([yes, _, _, _]) :-  position(room(X, Y), T), tell_kb(stench, room(X, Y)),adjacent(room(X, Y), room(A, B)),
                                           has_wumpus(room(A,B), yes), shoot(room(A, B), T), !.
@@ -64,10 +64,11 @@ heuristic([yes, _, _, _]) :- position(room(X, Y), T), tell_kb(stench, room(X, Y)
 heuristic([yes, _, _, _]) :- position(room(X, Y), T), tell_kb(stench, room(X, Y)), adjacent(room(X, Y), room(A, B)),
                                                  has_wumpus(room(A,B), maybe), shoot(room(A, B), T).
 
+%%% Here if the current room has no perceptions wee should move to a room that has not been visited already
 heuristic([no, no, _, _]) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)), asserta(safe(room(A, B))),
-                                          move(room(X, Y), room(A, B), T).
+                            findall(room(C,D), visited(room(C,D),_), L), not(member(room(A,B), L)), move(room(X, Y), room(A, B), T).
 
-heuristic([_, _, _, yes]) :- write('Game over... You won!'), halt().
+heuristic([_, _, _, yes]) :- write('Congrats... You won!').
 
 heuristic([_, yes, _, _]) :- position(room(X, Y), T), tell_kb(breeze, room(X, Y)), current_safest_cell(room(A, B)), move(room(X, Y), room(A, B), T).
 
@@ -93,7 +94,7 @@ remove_duplicates([Head | Tail], [Head | Result]) :-
 current_safest_cell(room(X, Y)) :- findall(S, total_current_score(room(_, _), S), L),
                                   min_list(L, MinScore),
                                   index_of(MinScore, L, Idx),
-                                  nth0(Idx, L, room(X, Y)).
+                                  nth0(Idx, L, room(X, Y)).         %%% L is just a list of scores, how do we find the room there???
 
 % From reference (hilios):
 % index_of([H|_], H, 0):- !.
@@ -105,6 +106,8 @@ total_current_score(room(X, Y), S) :- safe(room(X, Y)), S is 0. % or -inf?
 total_current_score(room(X, Y), S) :- findall(P, partial_score(room(X, Y), P), L), sum_list(L, S).
 
 % The lower the score, the safer the room
+%%% Shouldn't rooms that have pit_yes and wumpus_yes have the same score?
+%%% Shouldn't room with wumpus_maybe have a higher score than pit_maybe since there is only one wumpus?
 partial_score(room(X, Y), S) :- explorableRooms(E), member(room(X, Y), E), has_pit(room(X, Y), yes), S is 1000.
 partial_score(room(X, Y), S) :- explorableRooms(E), member(room(X, Y), E), has_wumpus(room(X, Y), yes), S is 2000.
 partial_score(room(X, Y), S) :- explorableRooms(E), member(room(X, Y), E), has_pit(room(X, Y), maybe), S is 400.
