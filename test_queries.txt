@@ -10,4 +10,6 @@ gold(room(2, 3)).
 glitter(room(2, 3)).
 score(X).
 
-[initial_states], [world_A], [main], [heuristic].
+[main], [heuristic], [initial_states], [world_a].
+position(room(X, Y), T).
+start_game().

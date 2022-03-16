@@ -4,12 +4,14 @@
 :- abolish(breeze/1).
 :- abolish(glitter/1).
 :- abolish(scream/1).
+:- abolish(safe/1).
 
 :- dynamic([
   stench/1,
   breeze/1,
   glitter/1,
-  scream/0
+  scream/1,
+  safe/1
 ]).
 
 % A room X,Y definitely has a pit if there is a breeze in room A,B adjacent to X,Y, and none of the adjacent rooms to A,B have a pit
