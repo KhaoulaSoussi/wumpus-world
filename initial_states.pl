@@ -1,6 +1,6 @@
 % Initial states common to all worlds.
 position(room(1, 1), 0).
-score(0).
+score(100).
 has_arrows().
 wumpus_alive().
 player_alive().

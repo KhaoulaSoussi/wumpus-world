@@ -1,11 +1,4 @@
-% K:
-% Do we need to abolish stench, breeze, glitter, and scream?
-% Clean some rules from unnecessary checks (e.g., no_surrounding_pit() checks if there is room(X,Y) which adjacent() also does that)
-% I think we should keep track of all the safe rooms (i.e., all adjacent rooms to a room with no perceptions + visited rooms)
-
-% L:
-% It doesn't hurt to abolish.
-% Agreed, for the last 2 comments. I tried to address the third. We'll get around to the second. Hopefully, redundancy doesn't affect correctness.
+% TODO: Clean some rules from unnecessary checks (e.g., no_surrounding_pit() checks if there is room(X,Y) which adjacent() also does that)
 
 :- abolish(stench/1).
 :- abolish(breeze/1).
@@ -37,18 +30,15 @@ no_surrounding_wumpus(room(A,B)) :- room(X,Y), adjacent(room(X,Y), room(A, B)), 
 % A room X,Y definitely has a wumpus if there is a stench in room A,B adjacent to X,Y, and all the adjacent rooms to A,B were visited
 has_wumpus(room(X,Y), yes) :- room(A,B), stench(room(A,B)), adjacent(room(X,Y), room(A, B)), all_adjacent_visited(room(A,B)).
 
-% OOOH We should change this rule to: A room X,Y definitely has no pit, if at least one of its adjacent rooms does not have a breeze, or if it has a wumpus
-% (I encountered this case while manually tracking the heuristics on world_A )
-% L: This implemented, right?
+% A room X,Y definitely has no pit, if at least one of its adjacents doesn't have a breeze, or if it has a wumpus
+has_pit(room(X,Y), no) :- position(room(A, B), _), adjacent(room(X,Y), room(A, B)), not(breeze(room(A,B))), !.
 
-% A room X,Y definitely has no pit, if none of its adjacent rooms have a breeze, or if it has a wumpus
-has_pit(room(X,Y), no) :- position(room(A, B), _), adjacent(room(X,Y), room(A, B)), not(breeze(room(A,B))) ;
-                          has_wumpus(room(X,Y), yes).
+has_pit(room(X,Y), no) :- has_wumpus(room(X,Y), yes).
 
-% OOOH We should change this rule to: A room X,Y definitely has no wumpus, if at least one of its adjacent rooms does not have a stench, or if it has a pit
-% A room X,Y definitely has no wumpus, if none of its adjacent rooms have a stench, or if it has a pit
-has_wumpus(room(X,Y), no) :- position(room(A, B), _), adjacent(room(X,Y), room(A, B)), not(stench(room(A,B)));
-                             has_pit(room(X,Y), yes).
+% A room X,Y definitely has no wumpus, if at least one of its adjacents doesn't have a stench, or if it has a pit
+has_wumpus(room(X,Y), no) :- position(room(A, B), _), adjacent(room(X,Y), room(A, B)), not(stench(room(A,B))), !.
+
+has_wumpus(room(X,Y), no) :- has_pit(room(X,Y), yes).
 
 has_pit(room(X,Y), maybe) :- not(has_pit(room(X, Y), yes)), not(has_pit(room(X, Y), no)), not(has_wumpus(room(X,Y), yes)),
                              adjacent(room(X,Y), room(A, B)) , breeze(room(A,B)), !.
@@ -67,7 +57,7 @@ tell_kb(scream) :- assertz(scream()).
 heuristic(perceptions([yes, _, _, _])) :-  position(room(X, Y), T), tell_kb(stench, room(X, Y)),adjacent(room(X, Y), room(A, B)),
                                           has_wumpus(room(A,B), yes), shoot(room(A, B), T), !.
 
-% If not sure where the wumpus is, move to an adjacent room that may be safe
+% If not sure where the wumpus is, move to the safest explorable room
 heuristic(perceptions([yes, _, _, _])) :- position(room(X, Y), T), tell_kb(stench, room(X, Y)), current_safest_cell(room(A, B)),
                                           move(room(X, Y), room(A, B), T).
 
@@ -75,19 +65,8 @@ heuristic(perceptions([yes, _, _, _])) :- position(room(X, Y), T), tell_kb(stenc
 heuristic(perceptions([yes, _, _, _])) :- position(room(X, Y), T), tell_kb(stench, room(X, Y)), adjacent(room(X, Y), room(A, B)),
                                                  has_wumpus(room(A,B), maybe), shoot(room(A, B), T).
 
-% if there are no perceptions at the current rooms, all adjacent rooms are safe, move randomly
-heuristic(perceptions([no, no, no, no])) :- position(room(X, Y), T), adjacent(room(X,Y), room(A, B)), move(room(X, Y), room(A, B), T).
-
-% No perceptions => adjacent rooms are safe.
-% does the following rule find all adjacents? or just one?
-heuristic(perceptions([no, no, _, _])) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)), asserta(safe(room(A, B))).
-% in other words, a room is safe if there is no breeze or stench in any of its adjacent ones
-% but since we implemented that a room is safe if it has no pit or wumpus
-% and that a pit or wumpus are surrounded by perceptions
-% doesn't it follow naturally? maybe not...
-% i had wanted to implement in main, starting like this:
-% safe(room(X, Y)) :- 
-% but it didn't feel right
+heuristic(perceptions([no, no, _, _])) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)), asserta(safe(room(A, B))),
+                                          move(room(X, Y), room(A, B), T).
 
 heuristic(perceptions([_, _, _, yes])) :- write('Game over... You won!'), halt().
 
@@ -112,29 +91,25 @@ heuristic([_, yes, _, _]) :- position(room(X, Y), T), tell_kb(breeze, room(X, Y)
 
 heuristic([_, _, yes, _]) :- position(room(X, Y), T), tell_kb(glitter, room(X, Y)), grab_gold(_)!.
 
-current_safest_cell(room(X, Y)) :- explorableRooms(E),
-% i hope this works
-                                  member(room(A, B), E),
-                                  findall(S, total_current_score(room(A, B), S), L),
+current_safest_cell(room(X, Y)) :- findall(S, total_current_score(room(A, B), S), L),
                                   min_list(L, MinScore),
                                   index_of(MinScore, L, Idx),
                                   nth0(Idx, L, room(X, Y)).
 
-% util to get index of element
 % From reference (hilios):
 % index_of([H|_], H, 0):- !.
 % index_of([_|T], H, Index):- index_of(T, H, OldIndex), !, Index is OldIndex + 1.
 % I hope the following works:
 index_of(Elt, Lst, Idx) :- nth0(Idx, Lst, Elt).
 
-total_current_score(room(X, Y), T) :- findall(P, partial_score(room(X, Y), P), L), sum_list(L, T).
+total_current_score(room(X, Y), S) :- safe(room(X, Y)), S is 0. % or -inf?
+total_current_score(room(X, Y), S) :- findall(P, partial_score(room(X, Y), P), L), sum_list(L, S).
 
 % The lower the score, the safer the room
-partial_score(room(X, Y), S) :- has_pit(room(X, Y), yes), S is 1000.
-partial_score(room(X, Y), S) :- has_wumpus(room(X, Y), yes), S is 2000.
-partial_score(room(X, Y), S) :- has_pit(room(X, Y), maybe), S is 400.
-partial_score(room(X, Y), S) :- has_wumpus(room(X, Y), maybe), S is 800.
-% consider visited rooms? rooms that are surely safe?
+partial_score(room(X, Y), S) :- explorableRooms(E), member(room(X, Y), E), has_pit(room(X, Y), yes), S is 1000.
+partial_score(room(X, Y), S) :- explorableRooms(E), member(room(X, Y), E), has_wumpus(room(X, Y), yes), S is 2000.
+partial_score(room(X, Y), S) :- explorableRooms(E), member(room(X, Y), E), has_pit(room(X, Y), maybe), S is 400.
+partial_score(room(X, Y), S) :- explorableRooms(E), member(room(X, Y), E), has_wumpus(room(X, Y), maybe), S is 800.
 
 % A bunch of atomic moves from X, Y to A, B
 % traveling from xy to ab through zw is equivalent to moving from xy to zw atomically then traveling from zw to ab

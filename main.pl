@@ -29,10 +29,8 @@ adjacent(room(X, Y), room(A, B)) :- room(X, Y), room(A, B),
 									A is X, B is Y-1 ;
 									A is X, B is Y+1).
 
-% the player should not have the right to check if a room is safe... This rule should be used only if we want to check if the current position
-% is safe... BUT, we actually care about what is in the current position (wumpus/pit/none) to act accordingly
 safe(room(X, Y)) :- visited(room(X, Y), _), !.
-safe(room(X, Y)) :- not(pit(room(X, Y))), not(wumpus(room(X, Y))).
+%safe(room(X, Y)) :- not(pit(room(X, Y))), not(wumpus(room(X, Y))).
 
 % SENSORS
 breeze(room(X, Y), yes) :- pit(room(A, B)), adjacent(room(X, Y), room(A, B)), !.
@@ -71,7 +69,7 @@ grab_gold(T) :- position(room(X, Y), T), gold(room(X, Y)),
 						retractall(gold(_)),
 						retractall(glitter(_)),
 						score(S),
-						C is S + 1000 - 1,
+						C is S + 100 - 1,
 						retractall(score(_)),
 						asserta(score(C)),
 						retractall(did_grab()),
@@ -116,19 +114,23 @@ eaten(T) :- position(room(X, Y), T), wumpus(room(X, Y)),
 		asserta(score(C)),
 		retractall(player_alive()).
 
-start_game :- loop(0).
-
-% will we consider doing this with score (life/health) instead?
-loop(100) :- write('Game Over... Reached max number of moves!'), nl, halt(), !.
+start_game() :- loop(0).
+loop(200) :- write('Game Over... Too much time spent!'), nl, halt(), !.
 loop(T) :-
   heuristic(perceptions(L)),       % Perceive and send perceptions to the heuristic
   position(room(X, Y), T),
-  % parentheses? (operator priority)
-  fall(T) -> (
-    format("Game Over... You fell in a pit in room(~w,~w) at time ~w!~n", [X,Y,T]).
+  (fall(T) -> (
+    format("Game Over... You fell in a pit in room(~w,~w) at time ~w!~n", [X,Y,T]),
+	halt().
   );
   eaten(T) -> (
-    format("Game Over... You were eaten by the wumpus in room(~w,~w) at time ~w!~n", [X,Y,T]).
+    format("Game Over... You were eaten by the wumpus in room(~w,~w) at time ~w!~n", [X,Y,T]),
+	halt().
   );
+  score(S),
+  S < 0 -> (
+	format("Game Over... Your life ran out in room(~w,~w) at time ~w!~n", [X,Y,T]),
+	halt().
+  ));
   Iter is T + 1,
   loop(Iter).
