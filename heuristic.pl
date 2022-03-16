@@ -14,34 +14,31 @@
 
 % A room X,Y definitely has a pit if there is a breeze in room A,B adjacent to X,Y, and none of the adjacent rooms to A,B have a pit
 has_pit(room(X,Y), yes) :- room(A,B), breeze(room(A,B)), adjacent(room(X,Y), room(A, B)), no_surrounding_pit(room(A,B)).
+% A room X,Y definitely has a pit if there is a breeze in room A,B adjacent to X,Y, and all the adjacent rooms to A,B were visited
+has_pit(room(X,Y), yes) :- room(A,B), breeze(room(A,B)), adjacent(room(X,Y), room(A, B)), all_adjacent_visited(room(A,B)).
+
+% A room X,Y definitely has no pit, if at least one of its adjacents doesn't have a breeze, or if it has a wumpus
+has_pit(room(X,Y), no) :- position(room(A, B), _), adjacent(room(X,Y), room(A, B)), not(breeze(room(A,B))), !.
+has_pit(room(X,Y), no) :- has_wumpus(room(X,Y), yes).
+
+has_pit(room(X,Y), maybe) :- not(has_pit(room(X, Y), yes)), not(has_pit(room(X, Y), no)), not(has_wumpus(room(X,Y), yes)),
+                             adjacent(room(X,Y), room(A, B)) , breeze(room(A,B)), !.
 
 no_surrounding_pit(room(A,B)) :- room(X,Y), adjacent(room(X,Y), room(A, B)), not(has_pit(room(X,Y), no)) , !, fail.
 
-% A room X,Y definitely has a pit if there is a breeze in room A,B adjacent to X,Y, and all the adjacent rooms to A,B were visited
-has_pit(room(X,Y), yes) :- room(A,B), breeze(room(A,B)), adjacent(room(X,Y), room(A, B)), all_adjacent_visited(room(A,B)).
+no_surrounding_wumpus(room(A,B)) :- room(X,Y), adjacent(room(X,Y), room(A, B)), not(has_wumpus(room(X,Y), no)) , !, fail.
 
 all_adjacent_visited(room(A,B)) :- room(X,Y), adjacent(room(X,Y), room(A, B)), not(visited(room(X,Y)),_) , !, fail.
 
 % A room X,Y definitely has a wumpus, if there is a stench in room A,B adjacent to X,Y, and none of the adjacent rooms to A,B have a wumpus
 has_wumpus(room(X,Y), yes) :- room(A,B), stench(room(A,B)), adjacent(room(X,Y), room(A, B)), no_surrounding_wumpus(room(A,B)).
-
-no_surrounding_wumpus(room(A,B)) :- room(X,Y), adjacent(room(X,Y), room(A, B)), not(has_wumpus(room(X,Y), no)) , !, fail.
-
 % A room X,Y definitely has a wumpus if there is a stench in room A,B adjacent to X,Y, and all the adjacent rooms to A,B were visited
 has_wumpus(room(X,Y), yes) :- room(A,B), stench(room(A,B)), adjacent(room(X,Y), room(A, B)), all_adjacent_visited(room(A,B)).
-
-% A room X,Y definitely has no pit, if at least one of its adjacents doesn't have a breeze, or if it has a wumpus
-has_pit(room(X,Y), no) :- position(room(A, B), _), adjacent(room(X,Y), room(A, B)), not(breeze(room(A,B))), !.
-
-has_pit(room(X,Y), no) :- has_wumpus(room(X,Y), yes).
 
 % A room X,Y definitely has no wumpus, if at least one of its adjacents doesn't have a stench, or if it has a pit
 has_wumpus(room(X,Y), no) :- position(room(A, B), _), adjacent(room(X,Y), room(A, B)), not(stench(room(A,B))), !.
 
 has_wumpus(room(X,Y), no) :- has_pit(room(X,Y), yes).
-
-has_pit(room(X,Y), maybe) :- not(has_pit(room(X, Y), yes)), not(has_pit(room(X, Y), no)), not(has_wumpus(room(X,Y), yes)),
-                             adjacent(room(X,Y), room(A, B)) , breeze(room(A,B)), !.
 
 has_wumpus(room(X,Y), maybe) :- not(has_wumpus(room(X, Y), yes)), not(has_wumpus(room(X, Y), no)), not(has_pit(room(X,Y), yes)),
                                 adjacent(room(X,Y), room(A, B)) , stench(room(A,B)), !.
@@ -54,21 +51,25 @@ tell_kb(scream) :- assertz(scream()).
 % HEURISTICS
 
 % Shoot the wumpus when you are sure it is in room(A,B)
-heuristic(perceptions([yes, _, _, _])) :-  position(room(X, Y), T), tell_kb(stench, room(X, Y)),adjacent(room(X, Y), room(A, B)),
+heuristic([yes, _, _, _]) :-  position(room(X, Y), T), tell_kb(stench, room(X, Y)),adjacent(room(X, Y), room(A, B)),
                                           has_wumpus(room(A,B), yes), shoot(room(A, B), T), !.
 
 % If not sure where the wumpus is, move to the safest explorable room
-heuristic(perceptions([yes, _, _, _])) :- position(room(X, Y), T), tell_kb(stench, room(X, Y)), current_safest_cell(room(A, B)),
+heuristic([yes, _, _, _]) :- position(room(X, Y), T), tell_kb(stench, room(X, Y)), current_safest_cell(room(A, B)),
                                           move(room(X, Y), room(A, B), T).
 
 % If not sure where the wumpus is, and no adjacent room is maybe safe, shoot any random adjacent room where there may be the wumpus
-heuristic(perceptions([yes, _, _, _])) :- position(room(X, Y), T), tell_kb(stench, room(X, Y)), adjacent(room(X, Y), room(A, B)),
+heuristic([yes, _, _, _]) :- position(room(X, Y), T), tell_kb(stench, room(X, Y)), adjacent(room(X, Y), room(A, B)),
                                                  has_wumpus(room(A,B), maybe), shoot(room(A, B), T).
 
-heuristic(perceptions([no, no, _, _])) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)), asserta(safe(room(A, B))),
+heuristic([no, no, _, _]) :- position(room(X, Y), T), adjacent(room(X, Y), room(A, B)), asserta(safe(room(A, B))),
                                           move(room(X, Y), room(A, B), T).
 
-heuristic(perceptions([_, _, _, yes])) :- write('Game over... You won!'), halt().
+heuristic([_, _, _, yes]) :- write('Game over... You won!'), halt().
+
+heuristic([_, yes, _, _]) :- position(room(X, Y), T), tell_kb(breeze, room(X, Y)), current_safest_cell(room(A, B)), move(room(X, Y), room(A, B), T).
+
+heuristic([_, _, yes, _]) :- position(room(X, Y), _), tell_kb(glitter, room(X, Y)), grab_gold(), !.
 
 explorableRooms(L) :- position(room(X,Y), _),
                       findall(room(A,B), adjacent(room(X, Y), room(A, B)), L1),
@@ -87,11 +88,7 @@ remove_duplicates([Head | Tail], Result) :-
 remove_duplicates([Head | Tail], [Head | Result]) :-
     remove_duplicates(Tail, Result).
 
-heuristic([_, yes, _, _]) :- position(room(X, Y), T), tell_kb(breeze, room(X, Y)), current_safest_cell(room(A, B)), move(room(X, Y), room(A, B), T).
-
-heuristic([_, _, yes, _]) :- position(room(X, Y), T), tell_kb(glitter, room(X, Y)), grab_gold(_)!.
-
-current_safest_cell(room(X, Y)) :- findall(S, total_current_score(room(A, B), S), L),
+current_safest_cell(room(X, Y)) :- findall(S, total_current_score(room(_, _), S), L),
                                   min_list(L, MinScore),
                                   index_of(MinScore, L, Idx),
                                   nth0(Idx, L, room(X, Y)).

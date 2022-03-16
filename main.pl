@@ -34,12 +34,12 @@ safe(room(X, Y)) :- visited(room(X, Y), _), !.
 
 % SENSORS
 breeze(room(X, Y), yes) :- pit(room(A, B)), adjacent(room(X, Y), room(A, B)), !.
+breeze(room(_, _), no).
 glitter(room(X, Y), yes) :- gold(room(X, Y)).
-stench(room(X, Y), yes) :- wumpus(room(A, B)), adjacent(room(X, Y), room(A, B)),  !.
+glitter(room(_, _), no).
+stench(room(X, Y), yes) :- wumpus(room(A, B)), adjacent(room(X, Y), room(A, B)), !.
+stench(room(_, _), no).
 scream(yes) :- kill().
-breeze(room(X, Y), no).
-glitter(room(X, Y), no).
-stench(room(X, Y), no).
 scream(no).
 
 perceptions([Stench, Breeze, Glitter, Scream]) :- position(room(X, Y), _),
@@ -116,21 +116,23 @@ eaten(T) :- position(room(X, Y), T), wumpus(room(X, Y)),
 
 start_game() :- loop(0).
 loop(200) :- write('Game Over... Too much time spent!'), nl, halt(), !.
+
 loop(T) :-
-  heuristic(perceptions(L)),       % Perceive and send perceptions to the heuristic
+  perceptions(L),
+  heuristic(L),
   position(room(X, Y), T),
   (fall(T) -> (
     format("Game Over... You fell in a pit in room(~w,~w) at time ~w!~n", [X,Y,T]),
-	halt().
+	halt
   );
   eaten(T) -> (
     format("Game Over... You were eaten by the wumpus in room(~w,~w) at time ~w!~n", [X,Y,T]),
-	halt().
+	halt
   );
   score(S),
   S < 0 -> (
 	format("Game Over... Your life ran out in room(~w,~w) at time ~w!~n", [X,Y,T]),
-	halt().
+	halt
   ));
   Iter is T + 1,
   loop(Iter).
