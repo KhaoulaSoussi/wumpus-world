@@ -13,3 +13,13 @@ score(X).
 [main], [heuristic], [initial_states], [world_a].
 position(room(X, Y), T).
 start_game().
+
+[main], [heuristic], [initial_states], [world_a].
+move(room(1, 1), room(1, 2), 0).
+safe(room(X, Y)).
+current_safest_cell(room(X, Y)).
+
+[main], [heuristic], [initial_states], [world_a].
+perceptions(L), heuristic(L).
+stench(room(X, Y)).
+has_wumpus(room(X, Y), A).

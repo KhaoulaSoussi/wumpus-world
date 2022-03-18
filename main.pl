@@ -25,11 +25,13 @@ in_bounds(X, Y) :- valid(X), valid(Y).
 room(X, Y) :- in_bounds(X, Y).
 adjacent(room(X, Y), room(A, B)) :- room(X, Y), room(A, B),
                                     (A is X-1, B is Y ;
-									A is X+1, B is Y ;
-									A is X, B is Y-1 ;
-									A is X, B is Y+1).
+                                    A is X+1, B is Y ;
+                                    A is X, B is Y-1 ;
+                                    A is X, B is Y+1).
 
 safe(room(X, Y)) :- visited(room(X, Y), _), !.
+safe(room(X, Y)) :- has_wumpus(room(X, Y), no), has_pit(room(X, Y), no).
+visited(room(X, Y), _) :- asserta(safe(room(X, Y))). % bad
 % safe(room(X, Y)) :- not(pit(room(X, Y))), not(wumpus(room(X, Y))).
 
 % SENSORS
@@ -58,19 +60,20 @@ perceptions([Stench, Breeze, Glitter, Scream]) :- position(room(X, Y), T),
 
 % ACTIONS
 % move from room(X, Y) to room(A, B) -- atomic move
-% NOTE: it could be a problem is A, B is the same as X, Y. If it happens repeatedly, the program might not terminate in a reasonable time, or at all.
-%%% Here instead of A \== X, B \== Y, we should do room(A,B) \== room(X,Y) otherwise we would not be able to move from room 1,1 to 1,2 for e.g.
 %%% no need for the two first rules position(room(X, Y), T), adjacent(room(X, Y), room(A, B)) because we would only call shoot once we check for these
 move(room(X, Y), room(A, B), T) :- room(A,B) \== room(X,Y), position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
 								retractall(position(_, _)),
 								Z is T+1,
 								asserta(position(room(A, B), Z)),
+                retractall(visited(room(A, B), _)), % to avoid redundancy
 								assertz(visited(room(A, B), Z)),
+                retractall(parent(_, room(A, B))),
 								asserta(parent(room(X, Y), room(A, B))),
 								score(S),
 								C is S - 1,
 								retractall(score(_)),
-								asserta(score(C)), format("Moved from room(~w,~w) to room(~w,~w) at time ~w~n", [X,Y,A,B,T]), !.
+								asserta(score(C)), format("Moved from room(~w,~w) to room(~w,~w) at time ~w~n", [X,Y,A,B,T]),
+                asserta(safe(room(A, B))), !.
 
 %%% Do we use did_grab() anywhere? We can just remove it!
 grab_gold() :- position(room(X, Y), T), gold(room(X, Y)),
@@ -86,7 +89,7 @@ grab_gold() :- position(room(X, Y), T), gold(room(X, Y)),
 
 
 %%% no need for the two first rules position(room(X, Y), T), adjacent(room(X, Y), room(A, B)) because we would only call shoot once we check for these
-shoot(room(X, Y)) :- position(room(A, B), _), adjacent(room(X, Y), room(A, B)), not(did_shoot()),
+shoot(room(X, Y)) :- position(room(A, B), T), adjacent(room(X, Y), room(A, B)), not(did_shoot()),
  					retractall(did_shoot()),
  					asserta(did_shoot()),
  					score(S),
@@ -134,7 +137,6 @@ start_game() :- loop(0).
 
 loop(200) :- write('Game Over... Too much time spent!'), nl, !. % halt(),
 
-%%% I just changed the variable T to Iter to not confuse T with time, also we were not supposed to pass the iteration number T as an argument (time) to position
 loop(Iter) :-
   perceptions(L),
   format("[IN LOOP] : Perceptions in loop iter ~w: ~w!~n", [Iter,L]),
@@ -149,9 +151,9 @@ loop(Iter) :-
 	halt
   );
   score(S),
-  S < 0 -> (
-	format("Game Over... Your life ran out in room(~w,~w) at time ~w!~n", [X,Y,T]),
-	halt
+  S < 1 -> (
+	format("Game Over... Your life ran out in room(~w,~w) at time ~w!~n", [X,Y,T])
+	%halt
   ));
   Next is Iter + 1,
   loop(Next).

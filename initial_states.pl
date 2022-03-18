@@ -11,4 +11,5 @@ did_shoot() :- false.
 did_grab() :- false.
 used_gold() :- false.
 scream(no).
-
+% add other non-perceptions for completeness, unless we don't need any of them.
+safe(room(1, 1)). % would love to not need this.
