@@ -15,7 +15,6 @@
   did_shoot/2,
   score/1,
   glitter/1,
-  did_grab/0,
   pit/1,
   player_alive/0,
   parent/2
@@ -55,40 +54,26 @@ perceptions([Stench, Breeze, Glitter, Scream]) :- position(room(X, Y), T),
                                                   scream(Scream),
                                                   format("[IN Perceptions] : Percepts in room(~w,~w) at time ~w: [~w,~w,~w,~w]!~n", [X,Y,T,Stench,Breeze,Glitter,Scream]),!.
 
-% GOLD STATE
-%%% No need for this anymore right?
-% has_gold() :- did_grab(), not(climb()).
-
 % ACTIONS
-% move from room(X, Y) to room(A, B) -- atomic move
-%%% no need for the two first rules position(room(X, Y), T), adjacent(room(X, Y), room(A, B)) because we would only call shoot once we check for these
-move(room(X, Y), room(A, B), T, backtrack) :- room(A,B) \== room(X,Y), position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
+% generic move
+travel(room(X, Y), room(A, B), T) :- room(A,B) \== room(X,Y),
+              % Xdiff is abs(A - X),
+              % Ydiff is abs(B - Y),
+              % Manhatt is Xdiff + Ydiff
 								retractall(position(_, _)),
 								Z is T+1,
+                % Z is T + Manhatt
 								asserta(position(room(A, B), Z)),
                 retractall(visited(room(A, B), _)), % to avoid redundancy
 								assertz(visited(room(A, B), Z)),
 								score(S),
 								C is S - 1,
+                % C is S - Manhatt
 								retractall(score(_)),
-								asserta(score(C)), format("Moved from room(~w,~w) to room(~w,~w) at time ~w~n", [X,Y,A,B,T]),
+								asserta(score(C)), format("Traveled from room(~w,~w) to room(~w,~w) at time ~w~n", [X,Y,A,B,T]),
                 asserta(safe(room(A, B))), !.
 
-move(room(X, Y), room(A, B), T, simple) :- room(A,B) \== room(X,Y), position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
-								retractall(position(_, _)),
-								Z is T+1,
-								asserta(position(room(A, B), Z)),
-                retractall(visited(room(A, B), _)), % to avoid redundancy
-								assertz(visited(room(A, B), Z)),
-                retractall(parent(_, room(A, B))),
-								asserta(parent(room(X, Y), room(A, B))),
-								score(S),
-								C is S - 1,
-								retractall(score(_)),
-								asserta(score(C)), format("Moved from room(~w,~w) to room(~w,~w) at time ~w~n", [X,Y,A,B,T]),
-                asserta(safe(room(A, B))), !.
 
-%%% Do we use did_grab() anywhere? We can just remove it!
 grab_gold() :- position(room(X, Y), T), gold(room(X, Y)),
 				retractall(gold(_)),
 				retractall(glitter(_)),
@@ -96,8 +81,6 @@ grab_gold() :- position(room(X, Y), T), gold(room(X, Y)),
                 C is S + 100 - 1,
                 retractall(score(_)),
                 asserta(score(C)),
-                retractall(did_grab()),
-                asserta(did_grab()),
                 format("Grabbed gold from room(~w,~w) at time ~w~n", [X,Y,T]).
 
 
@@ -125,13 +108,6 @@ kill() :- shoot(room(X, Y), _), wumpus(room(X, Y)),
  		retractall(wumpus_alive()),
  		retractall(wumpus(room(X, Y))).
 
-/* climb(T) :- P is T-1, position(room(X, Y), P), pit(room(X, Y)),
-				did_grab(), has_gold(),
-				retractall(has_gold()),
-				score(S),
-				C is S - 1000 - 1,
-                retractall(score(_)),
-                asserta(score(C)). */
 
 fall(T) :- position(room(X, Y), T), pit(room(X, Y)),
 		score(S),
@@ -149,7 +125,7 @@ eaten(T) :- position(room(X, Y), T), wumpus(room(X, Y)),
 
 start_game() :- loop(0).
 
-loop(200) :- write('Game Over... Too much time spent!'), nl, !. % halt(),
+loop(200) :- write('Game Over... Too much time spent!'), nl, !, halt.
 
 loop(Iter) :-
   perceptions(L),
@@ -157,24 +133,21 @@ loop(Iter) :-
   heuristic(L),
   position(room(X, Y), T),
   (fall(T) -> (
-    format("Game Over... You fell in a pit in room(~w,~w) at time ~w!~n", [X,Y,T]),
-	halt
+    format("Game Over... You fell in a pit in room(~w,~w) at time ~w!~n", [X,Y,T]), halt
   );
   eaten(T) -> (
-    format("Game Over... You were eaten by the wumpus in room(~w,~w) at time ~w!~n", [X,Y,T]),
-	halt
+    format("Game Over... You were eaten by the wumpus in room(~w,~w) at time ~w!~n", [X,Y,T]), halt
   );
   score(S),
   S < 1 -> (
-	format("Game Over... Your life ran out in room(~w,~w) at time ~w!~n", [X,Y,T]),
-	halt
+	format("Game Over... Your life ran out in room(~w,~w) at time ~w!~n", [X,Y,T]), halt
   );
   dead() -> (
     format("won!"), halt
   );
   (did_shoot(_, _), wumpus_alive() -> (
-    format("Missed your shot -- no way to win.")
-    % , halt
-  )));
+    format("Missed your shot -- no way to win."), halt
+  ));
+  check_for_wumpus(); check_for_pit());
   Next is Iter + 1,
   loop(Next).
