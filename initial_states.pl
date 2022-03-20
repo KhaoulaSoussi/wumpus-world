@@ -7,7 +7,7 @@ visited(room(1, 1), 0).
 has_pit(room(1, 1), no).
 has_wumpus(room(1, 1), no).
 gold(room(1, 1)) :- false.
-did_shoot() :- false.
+did_shoot(_ , _) :- false.
 did_grab() :- false.
 used_gold() :- false.
 scream(no).

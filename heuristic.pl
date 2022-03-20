@@ -8,6 +8,7 @@
 :- abolish(visited/2).
 :- abolish(has_wumpus/2).
 :- abolish(has_pit/2).
+:- abolish(current_safest_cell/1).
 
 :- dynamic([
   stench/1,
@@ -17,7 +18,8 @@
   safe/1,
   visited/2,
   has_wumpus/2,
-  has_pit/2
+  has_pit/2,
+  current_safest_cell/1
 ]).
 
 % The problem with all these rules is that they're never fired. I would hate to have to assert them, but that would work.
@@ -82,12 +84,17 @@ heuristic([_, no, _, _]) :- position(room(X, Y), T), adjacent(room(A, B), room(X
                             retractall(has_pit(room(A, B), _)),
                             asserta(has_pit(room(A, B), no)).
 
+% the next 2 rules are almost identical
 heuristic([yes, _, _, _]) :- write('h2'), nl, position(room(X, Y), T), tell_kb(stench, room(X, Y)), adjacent(room(X, Y), room(A, B)),
                                           has_wumpus(room(A,B), yes), !, shoot(room(A, B), T).
 
+% The order of the next 2 predicates is tricky. This way, we never shoot randomly.
+% The other way, we always shoot randomly.
+% I want to determine when to shoot randomly. In other words, when is the current safest cell not good enough?
+
 % If not sure where the wumpus is, move to the safest explorable room
 heuristic([yes, _, _, _]) :- write('h3'), nl, position(room(X, Y), T), tell_kb(stench, room(X, Y)), current_safest_cell(room(A, B)),
-                                          move(room(X, Y), room(A, B), T).
+                                          travel(room(X, Y), room(A, B), T).
 
 % If not sure where the wumpus is, and no adjacent room is maybe safe, shoot any random adjacent room where there may be the wumpus
 heuristic([yes, _, _, _]) :- write('h4'), nl, position(room(X, Y), T), tell_kb(stench, room(X, Y)), adjacent(room(X, Y), room(A, B)),
@@ -104,20 +111,19 @@ heuristic([yes, _, _, _]) :- write('h4'), nl, position(room(X, Y), T), tell_kb(s
 heuristic([no, no, _, _]) :- write('h5'), nl, position(room(X, Y), T), adjacent(room(X, Y), room(A, B)), asserta(safe(room(A, B))),
                             retractall(has_wumpus(room(A, B), _)), retractall(has_pit(room(A, B), _)),
                             asserta(has_wumpus(room(A, B), no)), asserta(has_pit(room(A, B), no)),
-                            explorableRooms(R), member(room(A, B), R),
-                            not(visited(room(A, B), _)), !,
-                            move(room(X, Y), room(A, B), T).
+                            current_safest_cell(room(C, D)),
+                            travel(room(X, Y), room(C, D), T). % travel?
 
 heuristic([_, yes, _, _]) :- write('h6'), nl, position(room(X, Y), T), tell_kb(breeze, room(X, Y)),
                             adjacent(room(X, Y), room(A, B)),
                             room(A, B) \== room(1, 1),
-                            not(has_pit(room(A, B), yes)),
-                            not(has_pit(room(A, B), no)),
-                            not(has_wumpus(room(A, B), yes)),
-                            not(has_wumpus(room(A, B), no)),
-                            not(has_pit(room(A, B), maybe)), % avoid redundancy
+                            % not(has_pit(room(A, B), yes)),
+                            % not(has_pit(room(A, B), no)),
+                            % not(has_wumpus(room(A, B), yes)),
+                            % not(has_wumpus(room(A, B), no)),
+                            retractall(has_pit(room(A, B), maybe)),
                             asserta(has_pit(room(A, B), maybe)),
-                            current_safest_cell(room(A, B)), move(room(X, Y), room(A, B), T).
+                            current_safest_cell(room(C, D)), format("travel from room(~w,~w) to room(~w,~w) ~n", [X, Y, C, D]), travel(room(X, Y), room(C, D), T).
 
 heuristic([_, _, yes, _]) :- write('h7'), nl, position(room(X, Y), _), tell_kb(glitter, room(X, Y)), grab_gold(), !.
 
@@ -139,29 +145,20 @@ remove_duplicates([Head | Tail], [Head | Result]) :-
     remove_duplicates(Tail, Result).
 
 current_safest_cell(room(X, Y)) :- findall(S, total_current_score(room(_, _), S), L),
-                                  write('compiled scores'),
                                   min_list(L, MinScore),
-                                  write('found min'),
                                   %index_of(MinScore, L, Idx),
-                                  min_score_room(MinScore, room(X, Y)).  % wouldn't even need index in this case
+                                  min_score_room(MinScore, room(X, Y)),  % don't even need index in this case
                                   %nth0(Idx, L, room(X, Y)). % we shouldn't use L, we should use another list containing both rooms and scores
+                                  position(room(A, B), T),
+                                  room(A, B) \== room(X, Y), !.
 
 min_score_room(MinVal, room(X, Y)) :- total_current_score(room(X, Y), MinVal).
 
-% From reference (hilios):
-% index_of([H|_], H, 0):- !.
-% index_of([_|T], H, Index):- index_of(T, H, OldIndex), !, Index is OldIndex + 1.
-% I hope the following works:
 index_of(Elt, Lst, Idx) :- nth0(Idx, Lst, Elt).
 
 total_current_score(room(X, Y), S) :- safe(room(X, Y)), S is 0. % or -inf?
 total_current_score(room(X, Y), S) :- findall(P, partial_score(room(X, Y), P), L), sum_list(L, S).
 
-% The lower the score, the safer the room
-%%% Shouldn't rooms that have pit_yes and wumpus_yes have the same score?
-% L: Now that we removed the possibility climb, yes.
-%%% Shouldn't room with wumpus_maybe have a higher score than pit_maybe since there is only one wumpus?
-% L: sounds good.
 partial_score(room(X, Y), S) :- explorableRooms(E), member(room(X, Y), E), has_pit(room(X, Y), yes), S is 2000.
 partial_score(room(X, Y), S) :- explorableRooms(E), member(room(X, Y), E), has_wumpus(room(X, Y), yes), S is 2000.
 partial_score(room(X, Y), S) :- explorableRooms(E), member(room(X, Y), E), has_pit(room(X, Y), maybe), S is 500.
@@ -172,6 +169,8 @@ partial_score(room(X, Y), Def) :- Def is 0.
 % traveling from xy to ab through zw is equivalent to moving from xy to zw atomically then traveling from zw to ab
 % base case: same room
 % zw is xy's parent
-travel(room(A, B), room(A, B), _).
-travel(room(X, Y), room(A, B), T) :- room(Z, W), parent(room(Z, W), room(X, Y)), 
-                    move(room(X, Y), room(Z, W), T), U is T+1, travel(room(Z, W), room(A, B), U), !.
+travel(room(X, Y), room(A, B), T) :- move(room(X, Y), room(A, B), T, simple).
+travel(room(X, Y), room(A, B), T) :- format("travel from ~w ~w to ~w ~w ~n", [X, Y, A, B]), position(room(C, D), _), room(C, D) \== room(A, B),
+                    parent(room(Z, W), room(X, Y)), 
+                    format("parent: ~w ~w ~n", [Z, W]),
+                    move(room(X, Y), room(Z, W), T, backtrack), U is T+1, travel(room(Z, W), room(A, B), U), !.
