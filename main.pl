@@ -103,7 +103,7 @@ eaten(T) :- position(room(X, Y), T), wumpus(room(X, Y)),
 
 start_game() :- loop(0).
 
-loop(200) :- write('Game Over... Too much time spent!'), nl, !, halt.
+loop(200) :- write('Game Over... Too much time spent!'), nl, !. %, halt.
 
 loop(Iter) :-
   perceptions(L),
@@ -111,20 +111,20 @@ loop(Iter) :-
   heuristic(L),
   position(room(X, Y), T),
   (fall(T) -> (
-    format("Game Over... You fell in a pit in room(~w,~w) at time ~w!~n", [X,Y,T]), !, halt
+    format("Game Over... You fell in a pit in room(~w,~w) at time ~w!~n", [X,Y,T]), ! %, halt
   );
   eaten(T) -> (
-    format("Game Over... You were eaten by the wumpus in room(~w,~w) at time ~w!~n", [X,Y,T]), !, halt
+    format("Game Over... You were eaten by the wumpus in room(~w,~w) at time ~w!~n", [X,Y,T]), ! %, halt
   );
   score(S),
   S < 1 -> (
-	format("Game Over... Your life ran out in room(~w,~w) at time ~w!~n", [X,Y,T]), !, halt
+	format("Game Over... Your life ran out in room(~w,~w) at time ~w!~n", [X,Y,T]), ! %, halt
   );
   dead() -> (
-    format("You won!"), !, halt
+    format("You won!"), ! %, halt
   );
   (did_shoot(_, _), wumpus_alive() -> (
-    format("Missed your shot -- no way to win."), !, halt
+    format("Missed your shot -- no way to win."), ! %, halt
   ));
   check_for_wumpus(); check_for_pit());
   Next is Iter + 1,
