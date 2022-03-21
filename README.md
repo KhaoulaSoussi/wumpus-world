@@ -1,24 +1,17 @@
 # wumpus-world
 
-Todos:
-- [ ] finish rules in main.pl
-  - [ ] test fall
-  - [ ] test climb
-  - [ ] test eaten
-  - [ ] test perceptors
-  - [ ] implement when the player dies after a fall (not having gold)
-  - [x] re-check climb/fall/has_gold rules (correctness, remove redundancy)
-- [ ] hard part: design heuristics (where to move next based on current KB?)
-  - [x] score (risk + cost) for each applicable cell
-  - [x] define explorable rooms if necessary
-  - [x] define heuristic for each sensor: given each sensor, what to do (4 rules)
-  - [x] if we score all explorable cells, we need to think about the path to be taken (it should be safe and ideally efficient) -- parent cells?
-  - [ ] come up with more rules general enough to ensure wumpus-yes or pit-yes
-  - [ ] make a few passes over all heuristics, ensuring consistency, correctness
-- [x] build a couple more worlds
-- [x] answer the questions or address the ideas we left for ourselves in the code comments
-- [ ] trace a couple of worlds through the code to make everything is in place
-- [ ] test, debug
-- [ ] screenshots of runs, code comments, reports
+So far, we always succeed in worlds A and worlds B thanks to our assertions of has_wumpus(_, yes).
+
+The outcome of world C seems to be depend on the random move made some time after timestamp 10. We get stuck in rooms (1, 1), (1, 2), and (2, 1) without this random move. Depending on this move, we could either win, or lose by falling, getting eaten, or shooting in the wrong place.
+
+To achieve a better outcome more often in world C, we can work towards moving more freely to different places, by ensuring we don't assume pits exist where they aren't.
+
+Thus, the heuristics could be improved as follows:
+- Reduce the places where has_pit(_, yes)
+- [Inconsiquential but indicates good heuristics] Make sure to grab the gold whne there is glitter. In principle, this is implemented, but in one run, it did not seem to work
+
+Moreover, the code itself could be improved as follows:
+- Investigate why the loop requires typing ; in swipl to move on to the next iteration and try to fix that
+- Make use of the scream perception instead of the dead() check in the loop. Strangely, Scream is always no, even when dead() is true.
 
 Useful refs: https://www.metalevel.at/wumpusworld/wumpus.pl, https://github.com/hilios/wumpus-prolog.
