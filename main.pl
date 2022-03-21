@@ -56,7 +56,7 @@ perceptions([Stench, Breeze, Glitter, Scream]) :- position(room(X, Y), T),
 
 % ACTIONS
 % generic move
-travel(room(X, Y), room(A, B), T) :- room(A,B) \== room(X,Y),
+travel(room(X, Y), room(A, B), T) :- position(room(X, Y), T), room(A,B) \== room(X,Y),
               % Xdiff is abs(A - X),
               % Ydiff is abs(B - Y),
               % Manhatt is Xdiff + Ydiff
@@ -64,15 +64,14 @@ travel(room(X, Y), room(A, B), T) :- room(A,B) \== room(X,Y),
 								Z is T+1,
                 % Z is T + Manhatt
 								asserta(position(room(A, B), Z)),
-                retractall(visited(room(A, B), _)), % to avoid redundancy
-								assertz(visited(room(A, B), Z)),
+                %retractall(visited(room(A, B), _)), % to avoid redundancy
+								asserta(visited(room(A, B), Z)),
 								score(S),
 								C is S - 1,
                 % C is S - Manhatt
 								retractall(score(_)),
 								asserta(score(C)), format("Traveled from room(~w,~w) to room(~w,~w) at time ~w~n", [X,Y,A,B,T]),
                 asserta(safe(room(A, B))), !.
-
 
 grab_gold() :- position(room(X, Y), T), gold(room(X, Y)),
 				retractall(gold(_)),
@@ -85,7 +84,7 @@ grab_gold() :- position(room(X, Y), T), gold(room(X, Y)),
 
 
 %%% no need for the two first rules position(room(X, Y), T), adjacent(room(X, Y), room(A, B)) because we would only call shoot once we check for these
-shoot(room(X, Y), T) :- write('shooting'), nl, position(room(A, B), T), adjacent(room(X, Y), room(A, B)), not(did_shoot(_, _)),
+shoot(room(X, Y), T) :- position(room(A, B), T), adjacent(room(X, Y), room(A, B)), not(did_shoot(_, _)),
  					retractall(did_shoot(_, _)),
  					asserta(did_shoot(X, Y)),
  					score(S),
@@ -133,20 +132,20 @@ loop(Iter) :-
   heuristic(L),
   position(room(X, Y), T),
   (fall(T) -> (
-    format("Game Over... You fell in a pit in room(~w,~w) at time ~w!~n", [X,Y,T]), halt
+    format("Game Over... You fell in a pit in room(~w,~w) at time ~w!~n", [X,Y,T]), !, halt
   );
   eaten(T) -> (
-    format("Game Over... You were eaten by the wumpus in room(~w,~w) at time ~w!~n", [X,Y,T]), halt
+    format("Game Over... You were eaten by the wumpus in room(~w,~w) at time ~w!~n", [X,Y,T]), !, halt
   );
   score(S),
   S < 1 -> (
-	format("Game Over... Your life ran out in room(~w,~w) at time ~w!~n", [X,Y,T]), halt
+	format("Game Over... Your life ran out in room(~w,~w) at time ~w!~n", [X,Y,T]), !, halt
   );
   dead() -> (
-    format("won!"), halt
+    format("You won!"), !, halt
   );
   (did_shoot(_, _), wumpus_alive() -> (
-    format("Missed your shot -- no way to win."), halt
+    format("Missed your shot -- no way to win."), !, halt
   ));
   check_for_wumpus(); check_for_pit());
   Next is Iter + 1,

@@ -23,3 +23,7 @@ current_safest_cell(room(X, Y)).
 perceptions(L), heuristic(L).
 stench(room(X, Y)).
 has_wumpus(room(X, Y), A).
+
+[main], [heuristic], [initial_states], [world_b].
+
+[main], [heuristic], [initial_states], [world_c].
