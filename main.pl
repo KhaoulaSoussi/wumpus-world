@@ -11,13 +11,15 @@
   position/2,
   wumpus_alive/0,
   gold/1,
+  safe/1,
   visited/2,
   did_shoot/2,
   score/1,
   glitter/1,
   pit/1,
   player_alive/0,
-  parent/2
+  parent/2,
+  explorable/1
 ]).
 
 valid(X) :- X is 1; X is 2; X is 3; X is 4.
@@ -46,31 +48,25 @@ scream(no).
 
 perceptions([Stench, Breeze, Glitter, Scream]) :- position(room(X, Y), T),
                                                   stench(room(X,Y), Stench),
-                                                  format("[IN Perceptions] : Stench percept in room(~w,~w): ~w!~n", [X,Y,Stench]),
                                                   breeze(room(X,Y), Breeze),
-                                                  format("[IN Perceptions] : Breeze percept in room(~w,~w): ~w!~n", [X,Y,Breeze]),
                                                   glitter(room(X,Y), Glitter),
-                                                  format("[IN Perceptions] : Glitter percept in room(~w,~w): ~w!~n", [X,Y,Glitter]),
                                                   scream(Scream),
                                                   format("[IN Perceptions] : Percepts in room(~w,~w) at time ~w: [~w,~w,~w,~w]!~n", [X,Y,T,Stench,Breeze,Glitter,Scream]),!.
 
 % ACTIONS
 % generic move
 travel(room(X, Y), room(A, B), T) :- room(A,B) \== room(X,Y),
-              % Xdiff is abs(A - X),
-              % Ydiff is abs(B - Y),
-              % Manhatt is Xdiff + Ydiff
-								retractall(position(_, _)),
-								Z is T+1,
-                % Z is T + Manhatt
-								asserta(position(room(A, B), Z)),
+                position(room(X,Y), T),
+                retractall(explorable(room(A,B))),
+                retractall(position(_, _)),
+                Z is T+1,
+                asserta(position(room(A, B), Z)),
                 retractall(visited(room(A, B), _)), % to avoid redundancy
-								assertz(visited(room(A, B), Z)),
-								score(S),
-								C is S - 1,
-                % C is S - Manhatt
-								retractall(score(_)),
-								asserta(score(C)), format("Traveled from room(~w,~w) to room(~w,~w) at time ~w~n", [X,Y,A,B,T]),
+                assertz(visited(room(A, B), Z)),
+                score(S),
+                C is S - 1,
+                retractall(score(_)),
+                asserta(score(C)), format("Traveled from room(~w,~w) to room(~w,~w) at time ~w~n", [X,Y,A,B,T]),
                 asserta(safe(room(A, B))), !.
 
 
@@ -125,13 +121,18 @@ eaten(T) :- position(room(X, Y), T), wumpus(room(X, Y)),
 
 start_game() :- loop(0).
 
-loop(200) :- write('Game Over... Too much time spent!'), nl, !, halt.
+loop(200) :- write('Game Over... Too much time spent!'), nl, !.
 
 loop(Iter) :-
-  perceptions(L),
-  format("[IN LOOP] : Perceptions in loop iter ~w: ~w!~n", [Iter,L]),
-  heuristic(L),
+  write("here"),
   position(room(X, Y), T),
+  perceptions(L),
+  tell_kb(L, room(X,Y)),
+  add_explorable(),
+  explorable(Z),
+  format("[IN LOOP] : Perceptions in room ~w: ~w!~n", [X,Y]),
+  format("Explorable: ~w", Z),
+  heuristic(L),
   (fall(T) -> (
     format("Game Over... You fell in a pit in room(~w,~w) at time ~w!~n", [X,Y,T]), halt
   );
@@ -147,7 +148,6 @@ loop(Iter) :-
   );
   (did_shoot(_, _), wumpus_alive() -> (
     format("Missed your shot -- no way to win."), halt
-  ));
-  check_for_wumpus(); check_for_pit());
+  )));
   Next is Iter + 1,
   loop(Next).

@@ -15,107 +15,99 @@
   breeze/1,
   glitter/1,
   scream/1,
+  gold/1,
   safe/1,
   visited/2,
-  has_wumpus/2,
-  has_pit/2,
-  current_safest_cell/1
+  has_wumpus/1,
+  has_pit/1,
+  has_no_pit/1,
+  has_no_wumpus/1,
+  current_safest_cell/1,
+  explorable/1,
+  maybe_has_pit/1,
+  maybe_has_wumpus/1
 ]).
 
-has_pit(room(X,Y), no) :- position(room(A, B), _), adjacent(room(X,Y), room(A, B)), not(breeze(room(A,B))), !.
-
-has_pit(room(X,Y), no) :- has_wumpus(room(X,Y), yes).
-
-has_pit(room(X,Y), maybe) :- not(has_pit(room(X, Y), yes)), not(has_pit(room(X, Y), no)), not(has_wumpus(room(X,Y), yes)),
-                             adjacent(room(X,Y), room(A, B)) , breeze(room(A,B)), !.
-
-%no_surrounding_pit(room(A,B)) :- adjacent(room(X,Y), room(A, B)), not(has_pit(room(X,Y), no)) , !, fail.
-no_surrounding_pit(room(A,B)) :- adjacent(room(X,Y), room(A, B)), ( not(has_pit(room(X, Y), _)); has_pit(room(X, Y), yes); has_pit(room(X, Y), maybe)).
+no_surrounding_pit(room(A,B)) :- adjacent(room(X,Y), room(A, B)), (not(has_pit(room(X, Y), _)); has_pit(room(X, Y), yes); has_pit(room(X, Y), maybe)).
 
 no_surrounding_wumpus(room(A,B)) :- adjacent(room(X,Y), room(A, B)), not(has_wumpus(room(X,Y), no)) , !, fail.
 
 all_adjacent_visited(room(A,B)) :- adjacent(room(X,Y), room(A, B)), not(visited(room(X,Y), _)) , !, fail.
 
-% workaround to manually trigger "yes" checks
-check_for_pit() :- breeze(room(A,B)), adjacent(room(X,Y), room(A, B)), no_surrounding_pit(room(A,B)),
-          room(X, Y) \== room(1, 1),
-          not(has_pit(room(X, Y), no)),
-          retractall(has_pit(room(X, Y), _)),
-          asserta(has_pit(room(X, Y), yes)).
+% An adjacent room(X,Y) has no pit if it is adjacent to a room that has no breeze, or if it has a wumpus
+has_no_pit(room(X,Y)) :- (position(room(A, B), _), not(breeze(room(A,B))); has_wumpus(room(X,Y))), retractall(maybe_has_pit(room(X,Y))), assertz(has_no_pit(room(X,Y))).
 
-check_for_pit() :- breeze(room(A,B)), adjacent(room(X,Y), room(A, B)), all_adjacent_visited(room(A,B)),
-          room(X, Y) \== room(1, 1),
-          not(has_pit(room(X, Y), no)),
-          retractall(has_pit(room(X, Y), _)),
-          asserta(has_pit(room(X, Y), yes)).
+% An adjacent room(X,Y) has no wumpus if it is adjacent to a room that has no stench, or if it has a pit
+has_no_wumpus(room(X,Y)) :- (position(room(A, B), _), not(stench(room(A,B))); has_pit(room(X,Y))), retractall(maybe_has_wumpus(room(X,Y))), assertz(has_no_wumpus(room(X,Y))).
 
-check_for_wumpus() :- stench(room(A,B)), adjacent(room(X,Y), room(A, B)), no_surrounding_wumpus(room(A,B)),
-          room(X, Y) \== room(1, 1),
-          not(has_wumpus(room(X, Y), no)),
-          retractall(has_wumpus(room(X, Y), _)),
-          asserta(has_wumpus(room(X, Y), yes)).
+% An adjacent room(X,Y) does have a pit if ....
+has_pit(room(X,Y)) :- (not(has_no_pit(room(X, Y))), breeze(room(A,B)), adjacent(room(X,Y), room(A, B)), (no_surrounding_pit(room(A,B)); all_adjacent_visited(room(A,B)))), retractall(maybe_has_pit(room(X,Y))), assertz(has_pit(room(X,Y))).
 
-check_for_wumpus() :- stench(room(A,B)), adjacent(room(X,Y), room(A, B)), all_adjacent_visited(room(A,B)),
-          room(X, Y) \== room(1, 1),
-          not(has_wumpus(room(X, Y), no)),
-          retractall(has_wumpus(room(X, Y), _)),
-          asserta(has_wumpus(room(X, Y), yes)).
+% An adjacent room(X,Y) does have a wumpus if ....
+has_wumpus(room(X,Y)) :- (not(has_no_wumpus(room(X, Y))), stench(room(A,B)), adjacent(room(X,Y), room(A, B)), (no_surrounding_wumpus(room(A,B)); all_adjacent_visited(room(A,B)))), retractall(maybe_has_wumpus(room(X,Y))), assertz(has_wumpus(room(X,Y))).
 
-has_wumpus(room(X,Y), no) :- position(room(A, B), _), adjacent(room(X,Y), room(A, B)), not(stench(room(A,B))), !.
+maybe_has_pit(room(X,Y)) :- not(has_pit(room(X, Y))), not(has_no_pit(room(X, Y))), not(has_wumpus(room(X,Y))), not(has_no_wumpus(room(X,Y))),
+                            adjacent(room(X,Y), room(A, B)) , stench(room(A,B)), !.
 
-has_wumpus(room(X,Y), no) :- has_pit(room(X,Y), yes).
+maybe_has_wumpus(room(X,Y)) :- not(has_wumpus(room(X, Y))), not(has_no_wumpus(room(X, Y))), not(has_pit(room(X,Y))), not(has_no_pit(room(X,Y))),
+                               adjacent(room(X,Y), room(A, B)) , stench(room(A,B)), !.
 
-has_wumpus(room(X,Y), maybe) :- not(has_wumpus(room(X, Y), yes)), not(has_wumpus(room(X, Y), no)), not(has_pit(room(X,Y), yes)),
-                                adjacent(room(X,Y), room(A, B)) , stench(room(A,B)), !.
-
-tell_kb(breeze, room(X, Y)) :- retractall(breeze(room(X, Y))), assertz(breeze(room(X,Y))).
-tell_kb(stench, room(X, Y)) :- retractall(stench(room(X, Y))), assertz(stench(room(X,Y))).
-tell_kb(glitter, room(X, Y)) :- retractall(glitter(room(X, Y))), assertz(glitter(room(X,Y))).
-tell_kb(scream) :- assertz(scream(yes)).
+tell_kb([yes, _, _, _], room(X,Y)) :- retractall(stench(room(X, Y))), assertz(stench(room(X,Y))).
+tell_kb([_, yes, _, _], room(X,Y)) :- retractall(breeze(room(X, Y))), assertz(breeze(room(X,Y))).
+tell_kb([_, _, yes, _], room(X,Y)) :- retractall(glitter(room(X, Y))), assertz(glitter(room(X,Y))).
+tell_kb([_, _, _, yes], _) :- assertz(scream(yes)).
+tell_kb([no,no,no,no], _).
 
 % HEURISTICS
+
 heuristic([_, _, _, yes]) :- write('h1'), nl, write('Congrats... You won!').
 
-heuristic([yes, _, _, _]) :- position(room(X, Y), T), adjacent(room(A, B), room(X, Y)),
+heuristic([no, no, _, _]) :- write('heuNoNo'), nl, findall(room(C,D), explorable(room(C,D)), [H|_]), position(room(X, Y), T), travel(room(X, Y), H, T), !.
+
+heuristic([yes, _, _, _]) :- write('h2'), nl, position(room(X, Y), T), adjacent(room(X, Y), room(A, B)),
+                             has_wumpus(room(A,B)), !, shoot(room(A, B), T).
+
+heuristic([yes, _, _, _]) :- write('h3'), nl, position(room(X, Y), T), findall(room(A,B), explorable(room(C,D)), [H|_]), travel(room(X, Y), H, T), !.
+
+heuristic([_, yes, _, _]) :- write('h3'), nl, position(room(X, Y), T), findall(room(A,B), explorable(room(A,B)), [H|_]),
+                             travel(room(X, Y), H, T), !.
+
+heuristic([no, _, _, _]) :- write('h4'), position(room(X, Y), T), adjacent(room(A, B), room(X, Y)),
+                            retractall(maybe_has_wumpus(room(A, B))),
+                            asserta(has_no_wumpus(room(A, B))).
+
+heuristic([_, no, _, _]) :- position(room(X, Y), T), adjacent(room(A, B), room(X, Y)),
+                            retractall(maybe_has_pit(room(A, B))),
+                            asserta(has_no_pit(room(A, B))).
+
+/*heuristic([yes, _, _, _]) :- position(room(X, Y), T), adjacent(room(A, B), room(X, Y)),
                             room(A, B) \== room(1, 1),
                             not(has_pit(room(A, B), yes)),
                             not(has_pit(room(A, B), no)),
                             not(has_wumpus(room(A, B), yes)),
                             not(has_wumpus(room(A, B), no)),
                             not(has_wumpus(room(A, B), maybe)), % to avoid redundancy
-                            asserta(has_wumpus(room(A, B), maybe)).
+                            asserta(has_wumpus(room(A, B), maybe)).*/
 
 % the next 2 rules are almost identical
-heuristic([yes, _, _, _]) :- write('h2'), nl, position(room(X, Y), T), tell_kb(stench, room(X, Y)), adjacent(room(X, Y), room(A, B)),
-                                          has_wumpus(room(A,B), yes), !, shoot(room(A, B), T).
+/*heuristic([yes, _, _, _]) :- write('h2'), nl, position(room(X, Y), T), tell_kb(stench, room(X, Y)), adjacent(room(X, Y), room(A, B)),
+                                          has_wumpus(room(A,B), yes), !, shoot(room(A, B), T).*/
 
 % The order of the next 2 predicates is tricky. This way, we never shoot randomly.
 % The other way, we always shoot randomly.
 % I want to determine when to shoot randomly. In other words, when is the current safest cell not good enough?
 
 % If not sure where the wumpus is, and no adjacent room is maybe safe, shoot any random adjacent room where there may be the wumpus
-heuristic([yes, _, _, _]) :- write('h4'), nl, position(room(X, Y), T), tell_kb(stench, room(X, Y)), adjacent(room(X, Y), room(A, B)),
-                                                 has_wumpus(room(A,B), maybe), !, shoot(room(A, B), T).
+/*heuristic([yes, _, _, _]) :- write('h4'), nl, position(room(X, Y), T), tell_kb(stench, room(X, Y)), adjacent(room(X, Y), room(A, B)),
+                                                 has_wumpus(room(A,B), maybe), !, shoot(room(A, B), T).*/
 
 % If not sure where the wumpus is, move to the safest explorable room
-heuristic([yes, _, _, _]) :- write('h3'), nl, position(room(X, Y), T), tell_kb(stench, room(X, Y)), current_safest_cell(room(A, B)),
-                                          travel(room(X, Y), room(A, B), T), !.
+/*heuristic([yes, _, _, _]) :- write('h3'), nl, position(room(X, Y), T), tell_kb(stench, room(X, Y)), current_safest_cell(room(A, B)),
+                                          travel(room(X, Y), room(A, B), T), !.*/
 
-heuristic([no, _, _, _]) :- position(room(X, Y), T), adjacent(room(A, B), room(X, Y)),
-                            retractall(has_wumpus(room(A, B), _)),
-                            asserta(has_wumpus(room(A, B), no)).
 
-heuristic([_, no, _, _]) :- position(room(X, Y), T), adjacent(room(A, B), room(X, Y)),
-                            retractall(has_pit(room(A, B), _)),
-                            asserta(has_pit(room(A, B), no)).
 
-heuristic([no, no, _, _]) :- write('h5'), nl, position(room(X, Y), T), adjacent(room(X, Y), room(A, B)), asserta(safe(room(A, B))),
-                            retractall(has_wumpus(room(A, B), _)), retractall(has_pit(room(A, B), _)),
-                            asserta(has_wumpus(room(A, B), no)), asserta(has_pit(room(A, B), no)),
-                            current_safest_cell(room(C, D)),
-                            travel(room(X, Y), room(C, D), T).
-
-heuristic([_, yes, _, _]) :- write('h6'), nl, position(room(X, Y), T), tell_kb(breeze, room(X, Y)),
+/*heuristic([_, yes, _, _]) :- write('h6'), nl, position(room(X, Y), T), tell_kb(breeze, room(X, Y)),
                             adjacent(room(X, Y), room(A, B)),
                             room(A, B) \== room(1, 1),
                             not(has_pit(room(A, B), yes)),
@@ -136,7 +128,10 @@ explorableRooms(L) :- position(room(X,Y), _),
                       findall(L3, adjacent_to_visited(L3) ,L4),
                       flatten(L4, L5),
                       append([L1, L2, L5], R),
-                      remove_duplicates(R, L).
+                      remove_duplicates(R, L). */
+
+% This keeps track of all explorable rooms from any position
+add_explorable() :- (position(room(X,Y), _), adjacent(room(X, Y), room(A, B)), not(visited(room(A,B), _)), has_no_pit(room(A,B)), has_no_wumpus(room(A,B)), assertz(explorable(room(A,B)))); true.
 
 adjacent_to_visited(L) :- visited(room(X,Y), _), findall(room(A,B), adjacent(room(X, Y), room(A, B)), L).
 
