@@ -70,7 +70,7 @@ heuristic([_, _, _, yes]) :-  write('Congrats... You won!'), halt.
 % opportunistically grab the gold
 heuristic([_, _, yes, _]) :- position(room(X, Y), _), tell_kb(glitter, room(X, Y)), grab_gold().
 
-% just get it over with!
+% To just get it over with:
 heuristic(_) :- position(room(X, Y), T), T > 10, random(0, 5, A), random(0, 5, B),
                 explorableRooms(E), member(room(A, B), E), not(visited(room(A, B), _)), !,
                 travel(room(X, Y), room(A, B), T).

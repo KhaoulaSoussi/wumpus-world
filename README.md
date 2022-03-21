@@ -2,7 +2,7 @@
 
 So far, we always succeed in worlds A and worlds B thanks to our assertions of has_wumpus(_, yes). The outcomes and final states of world A and world B are deterministic.
 
-The outcome of world C seems to be depend on the random move made some time after timestamp 10. We get stuck in rooms (1, 1), (1, 2), and (2, 1) without this random move. Depending on this move, we could either win, or lose by falling, getting eaten, or shooting in the wrong place.
+The outcome of world C seems to be depend on the random move made some time after timestamp 10. We get stuck in rooms (1, 1), (1, 2), and (2, 1) without this random move. Depending on this move, we could either win, or lose by falling, getting eaten, shooting in the wrong place, or running out of life due to moving too much.
 
 To achieve a better outcome more often in world C, we can work towards moving more freely to different places, by ensuring we don't assume pits exist where they aren't.
 
