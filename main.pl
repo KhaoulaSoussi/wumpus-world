@@ -1,5 +1,3 @@
-% ideally, we would order the rules in terms of meaning (actions, sensors, score-keeping, etc.) while preserving correctness for search
-
 :- abolish(position/2).
 :- abolish(wumpus_alive/0).
 :- abolish(gold/1).
@@ -31,8 +29,7 @@ adjacent(room(X, Y), room(A, B)) :- room(X, Y), room(A, B),
 
 safe(room(X, Y)) :- visited(room(X, Y), _), !.
 safe(room(X, Y)) :- has_wumpus(room(X, Y), no), has_pit(room(X, Y), no).
-visited(room(X, Y), _) :- asserta(safe(room(X, Y))). % bad
-% safe(room(X, Y)) :- not(pit(room(X, Y))), not(wumpus(room(X, Y))).
+visited(room(X, Y), _) :- asserta(safe(room(X, Y))).
 
 % SENSORS
 breeze(room(X, Y), yes) :- pit(room(A, B)), adjacent(room(X, Y), room(A, B)), !.
@@ -82,8 +79,6 @@ grab_gold() :- position(room(X, Y), T), gold(room(X, Y)),
                 asserta(score(C)),
                 format("Grabbed gold from room(~w,~w) at time ~w~n", [X,Y,T]).
 
-
-%%% no need for the two first rules position(room(X, Y), T), adjacent(room(X, Y), room(A, B)) because we would only call shoot once we check for these
 shoot(room(X, Y), T) :- position(room(A, B), T), adjacent(room(X, Y), room(A, B)), not(did_shoot(_, _)),
  					retractall(did_shoot(_, _)),
  					asserta(did_shoot(X, Y)),
@@ -94,19 +89,6 @@ shoot(room(X, Y), T) :- position(room(A, B), T), adjacent(room(X, Y), room(A, B)
  					format("Shot room(~w,~w) at time ~w~n", [X,Y,T]), !.
 
 dead() :- did_shoot(X, Y), wumpus(room(X, Y)), retractall(wumpus_alive()).
-
-% Note: kill is not an action that is actively performed by the agent.
-% It is just an abstraction to verify the death of the Wumpus.
-kill() :- shoot(room(X, Y), _), wumpus(room(X, Y)),
- 		retractall(wumpus_alive()),
- 		retractall(wumpus(room(X, Y))).
-
-%%% To avoid performing the shoot when "calling" kill(), we can do the following given that we change the rule did_shoot to take an argument which is the room that was shot
-%%% I didn't change did_shoot() anywhere yet, this is just a suggestion
-kill() :- shoot(room(X, Y), _), wumpus(room(X, Y)),
- 		retractall(wumpus_alive()),
- 		retractall(wumpus(room(X, Y))).
-
 
 fall(T) :- position(room(X, Y), T), pit(room(X, Y)),
 		score(S),

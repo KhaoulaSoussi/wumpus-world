@@ -91,7 +91,6 @@ heuristic([yes, _, _, _]) :- (has_wumpus(room(X, Y), yes); has_wumpus(room(X, Y)
                           retractall(has_wumpus(room(X, Y), _)),
                           asserta(has_wumpus(room(X, Y), no)).
 
-% the next 2 rules are almost identical
 heuristic([yes, _, _, _]) :- position(room(X, Y), T), tell_kb(stench, room(X, Y)), adjacent(room(X, Y), room(A, B)),
                                           has_wumpus(room(A,B), yes), !, shoot(room(A, B), T).
 
