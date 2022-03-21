@@ -54,18 +54,17 @@ perceptions([Stench, Breeze, Glitter, Scream]) :- position(room(X, Y), T),
 % ACTIONS
 % generic move
 travel(room(X, Y), room(A, B), T) :- position(room(X, Y), T), room(A,B) \== room(X,Y),
-              % Xdiff is abs(A - X),
-              % Ydiff is abs(B - Y),
-              % Manhatt is Xdiff + Ydiff
+                Xdiff is abs(A - X),
+                Ydiff is abs(B - Y),
+                Manhatt is Xdiff + Ydiff,
 								retractall(position(_, _)),
-								Z is T+1,
-                % Z is T + Manhatt
+								% Z is T+1,
+                Z is T + Manhatt,
 								asserta(position(room(A, B), Z)),
-                %retractall(visited(room(A, B), _)), % to avoid redundancy
 								asserta(visited(room(A, B), Z)),
 								score(S),
-								C is S - 1,
-                % C is S - Manhatt
+								% C is S - 1,
+                C is S - Manhatt,
 								retractall(score(_)),
 								asserta(score(C)), format("Traveled from room(~w,~w) to room(~w,~w) at time ~w~n", [X,Y,A,B,T]),
                 asserta(safe(room(A, B))), !.
