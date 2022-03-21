@@ -64,7 +64,7 @@ tell_kb(scream) :- assertz(scream(yes)).
 % This is never triggered, which is alright because we check it in the loop anyway.
 % It doesn't hurt to keep it (and make it look like we actually use the scream perceptor),
 % OR we could remove the check from the loop and try to rely on this one.
-heuristic([_, _, _, yes]) :-  write('Congrats... You won!').
+heuristic([_, _, _, yes]) :-  write('Congrats... You won!'), halt.
 
 % opportunistically grab the gold
 heuristic([_, _, yes, _]) :- position(room(X, Y), _), tell_kb(glitter, room(X, Y)), grab_gold().
